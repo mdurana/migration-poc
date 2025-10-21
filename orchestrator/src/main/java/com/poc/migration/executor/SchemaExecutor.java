@@ -26,6 +26,8 @@ import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
 import java.io.File;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 import liquibase.snapshot.SnapshotGeneratorFactory;
 import liquibase.snapshot.SnapshotControl;
@@ -213,9 +215,9 @@ public class SchemaExecutor {
             Database database = DatabaseFactory.getInstance()
                     .findCorrectDatabaseImplementation(new JdbcConnection(connection));
             
-            // We use FileSystemResourceAccessor because the file is on the container's filesystem
+            // We use DirectoryResourceAccessor because the file is on the container's filesystem
             // We point it to the root "/" so it can find the absolute changelogPath
-            DirectoryResourceAccessor resourceAccessor = new DirectoryResourceAccessor(new File("/"));
+            DirectoryResourceAccessor resourceAccessor = new DirectoryResourceAccessor(Paths.get("/"));
 
             // changelogPath is an absolute path like /app/generated-schema/job-1.xml
             Liquibase liquibase = new Liquibase(changelogPath, resourceAccessor, database);
