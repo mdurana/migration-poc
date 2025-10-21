@@ -4,6 +4,11 @@ WORKDIR /workspace
 
 # Copy the parent pom and the orchestrator module
 COPY pom.xml .
+
+# Copy the Maven wrapper scripts and configuration
+COPY mvnw .
+COPY .mvn ./.mvn
+
 COPY orchestrator/pom.xml ./orchestrator/
 COPY orchestrator/src ./orchestrator/src/
 
