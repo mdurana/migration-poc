@@ -5,6 +5,7 @@ import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import java.util.List;
+import java.util.Map;
 
 // This DTO maps to the job-template.json
 @Data
@@ -16,7 +17,7 @@ public class JobRequest {
     private DbConfig source;
     private DbConfig target;
     private List<String> tablesToMigrate;
-    // 'liquibaseChangelogFile' was removed
+    private Map<String, String> dataTypeMappings;
 
     @Data
     public static class DbConfig {

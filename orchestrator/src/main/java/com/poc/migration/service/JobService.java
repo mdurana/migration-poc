@@ -15,6 +15,7 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Objects;
 import java.util.Optional;
 
 @Service
@@ -52,13 +53,12 @@ public class JobService {
         return savedJob;
     }
 
-    @Async // Run the entire lifecycle in a separate thread
+    @Async
     public void runMigrationLifecycle(Long jobId, JobRequest request) {
         log.info("[Job-{}] Lifecycle started.", jobId);
-
-        // Define a unique path for the generated changelog
-        // e.g., /app/generated-schema/job-1-changelog.xml
+        
         String generatedChangelogPath = schemaOutputDir + "job-" + jobId + "-changelog.xml";
+        String normalizedChangelogPath = schemaOutputDir + "job-" + jobId + "-changelog.normalized.xml";
 
         try {
             // === 1. SCHEMA GENERATION ===
@@ -66,25 +66,44 @@ public class JobService {
             schemaExecutor.generateChangelog(request, generatedChangelogPath);
             log.info("[Job-{}] Schema generated successfully to {}.", jobId, generatedChangelogPath);
 
-            // === 2. SCHEMA APPLY ===
+            // --- HETEROGENEOUS CHECK ---
+            boolean isHomogeneous = Objects.equals(
+                    request.getSource().getType(),
+                    request.getTarget().getType()
+            );
+            
+            String changelogToApply; // Path to the file we will apply
+
+            if (isHomogeneous) {
+                log.info("[Job-{}] Homogeneous migration detected. Skipping normalization.", jobId);
+                changelogToApply = generatedChangelogPath;
+            } else {
+                log.info("[Job-{}] Heterogeneous migration detected. Starting automated normalization.", jobId);
+                // === 2. SCHEMA NORMALIZATION (NEW STEP) ===
+                updateStatus(jobId, JobStatus.SCHEMA_NORMALIZING, null);
+                schemaExecutor.normalizeChangelog(request, generatedChangelogPath, normalizedChangelogPath);
+                log.info("[Job-{}] Schema normalization complete. Output: {}", jobId, normalizedChangelogPath);
+                changelogToApply = normalizedChangelogPath;
+            }
+
+            // === 3. SCHEMA APPLY ===
             updateStatus(jobId, JobStatus.SCHEMA_APPLYING, null);
-            schemaExecutor.applyChangelog(request, generatedChangelogPath);
+            schemaExecutor.applyChangelog(request, changelogToApply);
             log.info("[Job-{}] Schema applied successfully to target.", jobId);
 
-            // === 3. DATA CONFIGURATION ===
+            // === 4. DATA CONFIGURATION ===
             updateStatus(jobId, JobStatus.DATA_CONFIGURING, null);
             dataExecutor.registerSourceAndTarget(request);
             dataExecutor.createMigrationJob(jobId, request);
             log.info("[Job-{}] Data sources configured.", jobId);
 
-            // === 4. DATA EXECUTION (Inventory + CDC) ===
+            // === 5. DATA EXECUTION (Inventory + CDC) ===
             updateStatus(jobId, JobStatus.DATA_RUNNING, null);
             dataExecutor.startMigrationJob(jobId);
-            // This is the long-polling part.
             dataExecutor.monitorJobUntilCdc(jobId);
             log.info("[Job-{}] CDC is running and in sync.", jobId);
 
-            // === 5. VALIDATION ===
+            // === 6. VALIDATION ===
             updateStatus(jobId, JobStatus.VALIDATING, null);
             boolean isValid = validationExecutor.validateRowCounts(request);
             if (!isValid) {
@@ -92,8 +111,7 @@ public class JobService {
             }
             log.info("[Job-{}] Validation passed.", jobId);
 
-            // === 6. DONE ===
-            // In a real tool, we would wait for cutover. Here, we just stop.
+            // === 7. DONE ===
             dataExecutor.stopMigrationJob(jobId);
             log.info("[Job-{}] Job stopped.", jobId);
             updateStatus(jobId, JobStatus.DONE, null);
@@ -101,15 +119,15 @@ public class JobService {
 
         } catch (Exception e) {
             log.error("[Job-{}] Lifecycle FAILED: {}", jobId, e.getMessage(), e);
-            // Determine which status to set based on current
             Job job = jobRepository.findById(jobId).orElse(new Job());
             JobStatus errorStatus = switch (job.getStatus()) {
                 case SCHEMA_GENERATING -> JobStatus.SCHEMA_GENERATE_FAILED;
+                case SCHEMA_NORMALIZING -> JobStatus.SCHEMA_NORMALIZE_FAILED; // <-- NEW
                 case SCHEMA_APPLYING -> JobStatus.SCHEMA_FAILED;
                 case DATA_CONFIGURING -> JobStatus.DATA_CONFIG_FAILED;
                 case DATA_RUNNING -> JobStatus.DATA_FAILED;
                 case VALIDATING -> JobStatus.VALIDATION_FAILED;
-                default -> JobStatus.DATA_FAILED; // Generic fallback
+                default -> JobStatus.DATA_FAILED;
             };
             updateStatus(jobId, errorStatus, e.getMessage());
         }
