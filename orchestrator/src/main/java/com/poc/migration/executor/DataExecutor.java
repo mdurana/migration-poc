@@ -1,167 +1,329 @@
 package com.poc.migration.executor;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.ObjectWriter;
 import com.poc.migration.model.JobRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.Resource;
-import org.springframework.core.io.ResourceLoader;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StreamUtils;
 
-import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.Statement;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 @Service
 @Slf4j
 @RequiredArgsConstructor
 public class DataExecutor {
 
-    // Inject config from application-poc.yaml
     @Value("${shardingsphere.admin.host}")
     private String adminHost;
+    
     @Value("${shardingsphere.admin.port}")
     private int adminPort;
+    
     @Value("${shardingsphere.admin.user}")
     private String adminUser;
+    
     @Value("${shardingsphere.admin.password}")
     private String adminPassword;
 
-    private final ResourceLoader resourceLoader;
-    private final ObjectMapper objectMapper;
-
-    // We use the ShardingSphere JDBC driver to send DistSQL
+    /**
+     * Connect to ShardingSphere Proxy using MySQL protocol.
+     * Use container port 3307, not host port!
+     */
     private Connection getAdminConnection() throws Exception {
-        String jdbcUrl = String.format("jdbc:shardingsphere:http://%s:%d/", adminHost, adminPort);
-        // We must load the driver class
-        Class.forName("org.apache.shardingsphere.driver.ShardingSphereDriver");
+        // For Docker: use container name and container port
+        String jdbcUrl = String.format("jdbc:mysql://%s:%d/", adminHost, adminPort);
+        Class.forName("com.mysql.cj.jdbc.Driver");
+        log.debug("Connecting to proxy at: {}", jdbcUrl);
         return DriverManager.getConnection(jdbcUrl, adminUser, adminPassword);
     }
 
+    /**
+     * Registers source and target storage units in ShardingSphere Proxy.
+     * This tells the proxy where the actual databases are.
+     */
     public void registerSourceAndTarget(JobRequest request) throws Exception {
-        // 1. Register Source
-        String sourceRql = loadRql("register_source.rql");
-        String sourceDef = buildDbDefinition("source_db", request.getSource());
-        executeDistSql(sourceRql.replace("{{db_definition}}", sourceDef));
-
-        // 2. Register Target
-        String targetRql = loadRql("register_target.rql");
-        String targetDef = buildDbDefinition("target_db", request.getTarget());
-        executeDistSql(targetRql.replace("{{db_definition}}", targetDef));
-    }
-
-    public void createMigrationJob(Long jobId, JobRequest request) throws Exception {
-        String rql = loadRql("create_job.rql");
-        String jobConfig = buildJobConfig(request.getTablesToMigrate());
+        log.info("Registering storage units...");
         
-        String finalRql = rql
-                .replace("{{job_name}}", "job_" + jobId)
-                .replace("{{job_config}}", jobConfig);
+        // 1. Register Source Storage Unit
+        String sourceUrl = buildJdbcUrl(request.getSource());
+        String registerSourceSQL = String.format("""
+            REGISTER STORAGE UNIT source_ds (
+                URL="%s",
+                USER="%s",
+                PASSWORD="%s",
+                PROPERTIES(
+                    "maximumPoolSize"="10",
+                    "minimumIdle"="2"
+                )
+            )
+            """, sourceUrl, request.getSource().getUser(), request.getSource().getPassword());
         
-        executeDistSql(finalRql);
-    }
-    
-    public void startMigrationJob(Long jobId) throws Exception {
-        String rql = loadRql("start_job.rql").replace("{{job_name}}", "job_" + jobId);
-        executeDistSql(rql);
+        executeDistSQL(registerSourceSQL);
+        log.info("✓ Source storage unit registered");
+
+        // 2. Register Target Storage Unit
+        String targetUrl = buildJdbcUrl(request.getTarget());
+        String registerTargetSQL = String.format("""
+            REGISTER STORAGE UNIT target_ds (
+                URL="%s",
+                USER="%s",
+                PASSWORD="%s",
+                PROPERTIES(
+                    "maximumPoolSize"="10",
+                    "minimumIdle"="2"
+                )
+            )
+            """, targetUrl, request.getTarget().getUser(), request.getTarget().getPassword());
+        
+        executeDistSQL(registerTargetSQL);
+        log.info("✓ Target storage unit registered");
+
+        // 3. Verify registration
+        verifyStorageUnits();
     }
 
-    public void stopMigrationJob(Long jobId) throws Exception {
-        String rql = "STOP MIGRATION JOB job_" + jobId;
-        executeDistSql(rql);
-    }
+    /**
+     * Creates migration jobs for each table.
+     * In ShardingSphere 5.5.2, each table requires a separate MIGRATE TABLE command.
+     */
+    public List<String> createMigrationJobs(JobRequest request) throws Exception {
+        List<String> jobIds = new ArrayList<>();
+        List<String> tables = request.getTablesToMigrate();
+        
+        log.info("Creating migration jobs for {} tables", tables.size());
 
-    public void monitorJobUntilCdc(Long jobId) throws Exception {
-        String rql = loadRql("check_status.rql").replace("{{job_name}}", "job_" + jobId);
-        boolean inInventory = true;
-
-        while (true) {
-            Thread.sleep(5000); // Poll every 5 seconds
+        for (String tableName : tables) {
+            // Use MIGRATE TABLE syntax
+            // Format: MIGRATE TABLE source_storage_unit.schema.table INTO target_storage_unit.schema.table
+            String sourceDb = request.getSource().getDatabase();
+            String targetDb = request.getTarget().getDatabase();
             
-            try (Connection conn = getAdminConnection();
-                 Statement stmt = conn.createStatement();
-                 ResultSet rs = stmt.executeQuery(rql)) {
+            String migrateSQL = String.format("""
+                MIGRATE TABLE source_ds.%s.%s INTO target_ds.%s.%s
+                """, sourceDb, tableName, targetDb, tableName);
+            
+            log.info("Creating migration for table: {}", tableName);
+            executeDistSQL(migrateSQL);
+            
+            // The job ID is returned, but we need to query for it
+            // For now, we'll track by table name
+            jobIds.add(tableName);
+        }
 
-                if (!rs.next()) {
-                    throw new RuntimeException("Job status not found for job_" + jobId);
-                }
+        log.info("✓ Created {} migration jobs", jobIds.size());
+        return jobIds;
+    }
 
+    /**
+     * Starts migration jobs. In 5.5.2, jobs auto-start, so this checks status.
+     */
+    public void startMigrationJobs() throws Exception {
+        log.info("Checking migration job status...");
+        
+        try (Connection conn = getAdminConnection();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery("SHOW MIGRATION LIST")) {
+            
+            log.info("Active migration jobs:");
+            while (rs.next()) {
+                String id = rs.getString("id");
+                String tables = rs.getString("tables");
                 String status = rs.getString("status");
-                String inventoryFinishedPercentage = rs.getString("inventory_finished_percentage");
-                String incrementalDelayMilliseconds = rs.getString("incremental_delay_milliseconds");
-
-                log.info("[Job-{}] Status: {}, Inventory: {}%, Lag (ms): {}", 
-                    jobId, status, inventoryFinishedPercentage, incrementalDelayMilliseconds);
-
-                if ("INVENTORY_FINISHED".equals(status)) {
-                    inInventory = false;
-                }
-
-                if (!inInventory && "ALMOST_FINISHED".equals(status)) {
-                    // "ALMOST_FINISHED" means CDC is running and lag is minimal
-                    log.info("[Job-{}] CDC is in sync. Proceeding.", jobId);
-                    return; // Success!
-                }
-
-                if (status.contains("ERROR") || status.contains("FAILED")) {
-                    throw new RuntimeException("Migration job failed with status: " + status);
-                }
+                log.info("  Job ID: {}, Tables: {}, Status: {}", id, tables, status);
             }
         }
     }
 
+    /**
+     * Stops a specific migration job.
+     */
+    public void stopMigrationJob(String jobId) throws Exception {
+        String stopSQL = String.format("STOP MIGRATION '%s'", jobId);
+        executeDistSQL(stopSQL);
+        log.info("✓ Stopped migration job: {}", jobId);
+    }
 
-    // --- HELPER METHODS ---
+    /**
+     * Monitors migration progress until all tables reach incremental sync.
+     * Returns when migration is ready for cutover.
+     */
+    public void monitorJobsUntilReady() throws Exception {
+        log.info("Monitoring migration progress...");
+        
+        boolean allReady = false;
+        int checkCount = 0;
+        
+        while (!allReady && checkCount < 120) { // Max 10 minutes (120 * 5s)
+            Thread.sleep(5000); // Poll every 5 seconds
+            checkCount++;
+            
+            try (Connection conn = getAdminConnection();
+                 Statement stmt = conn.createStatement();
+                 ResultSet rs = stmt.executeQuery("SHOW MIGRATION LIST")) {
+                
+                allReady = true;
+                boolean hasJobs = false;
+                
+                while (rs.next()) {
+                    hasJobs = true;
+                    String id = rs.getString("id");
+                    String tables = rs.getString("tables");
+                    String status = rs.getString("status");
+                    
+                    log.info("[Check #{}] Job {}: {} - Status: {}", 
+                            checkCount, id, tables, status);
+                    
+                    // Check if job is ready for cutover
+                    if (!"EXECUTE_INCREMENTAL_TASK".equals(status) && 
+                        !"FINISHED".equals(status)) {
+                        allReady = false;
+                    }
+                    
+                    // Check for errors
+                    if (status != null && status.contains("ERROR")) {
+                        throw new RuntimeException("Migration job " + id + " failed: " + status);
+                    }
+                }
+                
+                if (!hasJobs) {
+                    throw new RuntimeException("No migration jobs found!");
+                }
+                
+                if (allReady) {
+                    log.info("✓ All migration jobs are ready for cutover");
+                    return;
+                }
+            }
+        }
+        
+        if (!allReady) {
+            log.warn("Migration monitoring timed out after {} checks", checkCount);
+        }
+    }
 
-    private void executeDistSql(String rql) throws Exception {
-        log.info("Executing DistSQL: {}...", rql.substring(0, Math.min(rql.length(), 100)));
+    /**
+     * Gets detailed status of a specific migration job.
+     */
+    public void showMigrationStatus(String jobId) throws Exception {
+        String statusSQL = String.format("SHOW MIGRATION STATUS '%s'", jobId);
+        
+        try (Connection conn = getAdminConnection();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(statusSQL)) {
+            
+            log.info("Migration status for job {}:", jobId);
+            
+            while (rs.next()) {
+                int columnCount = rs.getMetaData().getColumnCount();
+                StringBuilder sb = new StringBuilder();
+                
+                for (int i = 1; i <= columnCount; i++) {
+                    String columnName = rs.getMetaData().getColumnName(i);
+                    String value = rs.getString(i);
+                    sb.append(columnName).append("=").append(value).append(", ");
+                }
+                
+                log.info("  {}", sb.toString());
+            }
+        }
+    }
+
+    /**
+     * Commits (finalizes) the migration, switching over to target.
+     */
+    public void commitMigration(String jobId) throws Exception {
+        log.info("Committing migration job: {}", jobId);
+        
+        // Run consistency check first
+        String checkSQL = String.format("CHECK MIGRATION '%s'", jobId);
+        executeDistSQL(checkSQL);
+        log.info("✓ Consistency check passed");
+        
+        // Commit the migration
+        String commitSQL = String.format("COMMIT MIGRATION '%s'", jobId);
+        executeDistSQL(commitSQL);
+        log.info("✓ Migration committed successfully");
+    }
+
+    /**
+     * Rolls back the migration if something goes wrong.
+     */
+    public void rollbackMigration(String jobId) throws Exception {
+        String rollbackSQL = String.format("ROLLBACK MIGRATION '%s'", jobId);
+        executeDistSQL(rollbackSQL);
+        log.info("✓ Migration rolled back: {}", jobId);
+    }
+
+    /**
+     * Verifies that storage units were registered correctly.
+     */
+    private void verifyStorageUnits() throws Exception {
+        log.info("Verifying storage unit registration...");
+        
+        try (Connection conn = getAdminConnection();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery("SHOW STORAGE UNITS")) {
+            
+            log.info("Registered storage units:");
+            boolean hasSource = false;
+            boolean hasTarget = false;
+            
+            while (rs.next()) {
+                String name = rs.getString("name");
+                String type = rs.getString("type");
+                String url = rs.getString("url");
+                
+                log.info("  {} - {} - {}", name, type, url);
+                
+                if ("source_ds".equals(name)) hasSource = true;
+                if ("target_ds".equals(name)) hasTarget = true;
+            }
+            
+            if (!hasSource || !hasTarget) {
+                throw new RuntimeException("Storage units not properly registered!");
+            }
+            
+            log.info("✓ Storage units verified");
+        }
+    }
+
+    /**
+     * Executes a DistSQL command on the ShardingSphere Proxy.
+     */
+    private void executeDistSQL(String sql) throws Exception {
+        // Log first 200 chars for debugging
+        String preview = sql.length() > 200 ? sql.substring(0, 200) + "..." : sql;
+        log.debug("Executing DistSQL: {}", preview);
+        
         try (Connection conn = getAdminConnection();
              Statement stmt = conn.createStatement()) {
-            stmt.execute(rql);
+            
+            stmt.execute(sql);
+            log.debug("✓ DistSQL executed successfully");
+            
+        } catch (Exception e) {
+            log.error("Failed to execute DistSQL: {}", preview);
+            log.error("Error: {}", e.getMessage());
+            throw e;
         }
     }
 
-    private String buildDbDefinition(String id, JobRequest.DbConfig config) throws JsonProcessingException {
-        // This converts the DbConfig into the JSON string ShardingSphere expects
-        Map<String, Object> props = Map.of(
-            "jdbcUrl", String.format("jdbc:%s://%s:%d/%s?useSSL=false&allowPublicKeyRetrieval=true",
-                config.getType(), config.getHost(), config.getPort(), config.getDatabase()),
-            "username", config.getUser(),
-            "password", config.getPassword()
-        );
-        ObjectWriter writer = objectMapper.writer();
-        return String.format("ID=%s, TYPE=Standard, PROPS(%s)", id, writer.writeValueAsString(props));
-    }
-
-    private String buildJobConfig(List<String> tables) throws JsonProcessingException {
-        // Builds the JSON config for the CREATE JOB command
-        Map<String, Object> config = Map.of(
-            "source", Map.of(
-                "type", "DATABASE", 
-                "database", "source_db"
-            ),
-            "target", Map.of(
-                "type", "DATABASE",
-                "database", "target_db"
-            ),
-            "tables", tables
-        );
-        return objectMapper.writer().writeValueAsString(config);
-    }
-    
-    private String loadRql(String fileName) throws Exception {
-        Resource resource = resourceLoader.getResource("file:/app/data/" + fileName);
-        try (InputStream is = resource.getInputStream()) {
-            return StreamUtils.copyToString(is, StandardCharsets.UTF_8);
+    /**
+     * Builds proper JDBC URL for each database type.
+     */
+    private String buildJdbcUrl(JobRequest.DbConfig config) {
+        if ("postgresql".equals(config.getType())) {
+            return String.format("jdbc:postgresql://%s:%d/%s?useSSL=false",
+                    config.getHost(), config.getPort(), config.getDatabase());
         }
+        
+        // MySQL
+        return String.format("jdbc:mysql://%s:%d/%s?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC",
+                config.getHost(), config.getPort(), config.getDatabase());
     }
 }

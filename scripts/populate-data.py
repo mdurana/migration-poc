@@ -10,8 +10,8 @@ DB_CONFIG = {
     'password': 'source_password',
     'database': 'sourcedb'
 }
-NUM_USERS = 1000
-NUM_ORDERS = 5000
+NUM_USERS = 100000
+NUM_ORDERS = 500000
 # ---------------------
 
 def get_random_date(start, end):

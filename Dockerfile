@@ -1,5 +1,5 @@
 # Stage 1: Build the application
-FROM eclipse-temurin:25-jdk-jammy as builder
+FROM eclipse-temurin:25-jdk-jammy AS builder
 WORKDIR /workspace
 
 # Copy the parent pom and the orchestrator module

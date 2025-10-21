@@ -1,5 +1,5 @@
 {
-  "jobName": "poc-mysql-job",
+  "jobName": "mysql-to-mysql-migration",
   "source": {
     "type": "mysql",
     "host": "source-db",

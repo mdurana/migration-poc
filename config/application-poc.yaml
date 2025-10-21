@@ -21,10 +21,10 @@ spring:
 shardingsphere:
   admin:
     host: shardingsphere-proxy
-    port: 8888
+    port: 3307
     # These creds are set in the shardingsphere-server-template.yaml
     user: root
-    password: root_password 
+    password: root
 
 # Path for externalized schema files
 migration:

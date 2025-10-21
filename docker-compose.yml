@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   orchestrator:
     build:
@@ -51,7 +49,7 @@ services:
     command: --default-authentication-plugin=mysql_native_password --server-id=2
 
   target-db-pg:
-    image: postgres:15
+    image: postgres:17
     ports:
       - "5432:5432"
     environment:
@@ -66,14 +64,12 @@ services:
       - "2181:2181"
 
   shardingsphere-proxy:
-    # --- UPDATED VERSION TO MATCH POM.XML ---
     image: apache/shardingsphere-proxy:5.5.2
-    # ----------------------------------------
     ports:
       - "3309:3307" # Main proxy port (if we were proxying)
-      - "8888:8888" # Admin/DistSQL port
     volumes:
-      - ./config/shardingsphere-server-template.yaml:/opt/shardingsphere-proxy/conf/server.yaml
+      - ./ext-lib:/opt/shardingsphere-proxy/ext-lib
+      - ./config/shardingsphere-server-template.yaml:/opt/shardingsphere-proxy/conf/global.yaml
     depends_on:
       - zookeeper
 

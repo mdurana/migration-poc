@@ -1,7 +1,4 @@
-# This file configures the ShardingSphere-Proxy itself.
-
 mode:
-  # Use Cluster mode so the proxy's own state is in ZooKeeper
   type: Cluster
   repository:
     type: ZooKeeper
@@ -13,47 +10,34 @@ mode:
       maxRetries: 3
       operationTimeoutMilliseconds: 500
 
-# Defines the 'root' user for the admin/DistSQL port
 authority:
-  authentication:
-    root:
-      user: root
-      password: root_password
+  users:
+    - user: root@%
+      password: root
   privilege:
     type: ALL_PERMITTED
 
-migration:
-  # Use Cluster mode to store migration job progress in ZooKeeper
-  type: Cluster
-  repository:
-    type: ZooKeeper
-    props:
-      # This MUST match the 'mode.repository' configuration above
-      namespace: migration_poc
-      server-lists: zookeeper:2181
-      retryIntervalMilliseconds: 500
-      timeToLiveSeconds: 60
-      maxRetries: 3
-      operationTimeoutMilliseconds: 500
-  props:
-    # --- Tuning Properties ---
-    # Global thread pool for all migration jobs on this proxy cluster
-    worker-thread: 40
-    
-    # Default batch size for reading/writing during inventory
-    batch-size: 1000
-    
-    # Internal queue sizes for backpressure between reading/writing
-    read-batch-queue-size: 1000
-    write-batch-queue-size: 1000
+transaction:
+  defaultType: LOCAL
 
-# --- General Proxy Properties ---
 props:
-  # Use JDBC as the backend driver (vs. Vert.x)
-  proxy-backend-driver-type: JDBC
+  proxy-frontend-database-protocol-type: MySQL
   
-  # The admin port our Orchestrator connects to (e.g., 8888)
-  proxy-admin-port: 8888
+  # Show executed SQL for debugging
+  sql-show: true
+  sql-simple: false
   
-  # Set a max connection limit
-  max-connections-size-per-query: 128
+  # Performance tuning for migration
+  kernel-executor-size: 16
+
+  max-connections-size-per-query: 8
+  
+  # Larger fetch size for better throughput
+  proxy-backend-query-fetch-size: 1000
+  
+  # Increase flush threshold
+  proxy-frontend-flush-threshold: 256
+  
+  # No connection limit
+  proxy-frontend-max-connections: 0
+  

@@ -50,12 +50,6 @@
                 <version>${hibernate.version}</version>
             </dependency>
 
-            <dependency>
-                <groupId>org.apache.shardingsphere</groupId>
-                <artifactId>shardingsphere-jdbc-driver</artifactId>
-                <version>${shardingsphere.version}</version>
-            </dependency>
-
             <!-- Lombok dependency management -->
             <dependency>
                 <groupId>org.projectlombok</groupId>

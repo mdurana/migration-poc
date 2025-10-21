@@ -55,8 +55,8 @@ Generating 5000 orders...
 Orders populated successfully.
 
 --- Verification ---
-Total Users:  1000
-Total Orders: 5000
+Total Users:  100000
+Total Orders: 500000
 --------------------
 Database connection closed.
 ```
