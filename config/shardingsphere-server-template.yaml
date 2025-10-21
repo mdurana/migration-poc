@@ -1,0 +1,27 @@
+# This is a minimal config for ShardingSphere-Proxy to enable migration.
+# It does not define any data sources or rules, only the admin user and metadata store.
+
+mode:
+  type: Cluster
+  repository:
+    type: ZooKeeper
+    props:
+      namespace: migration_poc
+      server-lists: zookeeper:2181
+      retryIntervalMilliseconds: 500
+      timeToLiveSeconds: 60
+      maxRetries: 3
+      operationTimeoutMilliseconds: 500
+
+# Defines the 'root' user for the admin/DistSQL port
+authority:
+  authentication:
+    root:
+      user: root
+      password: root_password
+  privilege:
+    type: ALL_PERMITTED
+
+props:
+  proxy-backend-driver-type: JDBC # Use JDBC for connections
+  proxy-admin-port: 8888 # The admin port we connect to

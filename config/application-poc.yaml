@@ -1,0 +1,33 @@
+server:
+  port: 8080
+
+# Spring JPA / Metadata DB (SQLite)
+# We get the path from an environment variable set in docker-compose.yml
+spring:
+  datasource:
+    url: jdbc:sqlite:${SQLITE_DB_PATH:./orchestrator.db}
+    driver-class-name: org.sqlite.JDBC
+  jpa:
+    hibernate:
+      ddl-auto: update # Automatically create/update metadata tables
+    database-platform: org.hibernate.community.dialect.SQLiteDialect
+
+# ShardingSphere Proxy Admin Connection
+shardingsphere:
+  admin:
+    host: shardingsphere-proxy
+    port: 8888
+    # These creds are set in the shardingsphere-server-template.yaml
+    user: root
+    password: root_password 
+
+# Path for externalized schema files
+migration:
+  schema:
+    output-dir: /app/generated-schema/ # This matches the container path from docker-compose
+
+# Enable async for the state machine
+spring.task.execution:
+  pool:
+    core-size: 2
+    max-size: 10

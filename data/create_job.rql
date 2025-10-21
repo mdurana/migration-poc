@@ -1,0 +1,4 @@
+CREATE MIGRATION JOB {{job_name}} (
+DATA_CONSISTENCY_CHECKER(TYPE=NONE),
+PROPERTIES('job_config'='''{{job_config}}''')
+)

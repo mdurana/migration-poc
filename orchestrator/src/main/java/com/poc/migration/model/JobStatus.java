@@ -1,0 +1,17 @@
+package com.poc.migration.model;
+
+public enum JobStatus {
+    PENDING,
+    SCHEMA_GENERATING,
+    SCHEMA_GENERATE_FAILED,
+    SCHEMA_APPLYING,
+    SCHEMA_FAILED,
+    DATA_CONFIGURING,
+    DATA_CONFIG_FAILED,
+    DATA_RUNNING, // Inventory + CDC
+    DATA_FAILED,
+    VALIDATING,
+    VALIDATION_FAILED,
+    DONE,
+    ABORTED
+}

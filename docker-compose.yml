@@ -1,0 +1,68 @@
+version: '3.8'
+
+services:
+  orchestrator:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    volumes:
+      # Mount the config file
+      - ./config/application-poc.yaml:/app/config/application.yaml
+      # Mount the job template for easy access (optional)
+      - ./config/job-template.json:/app/job-template.json
+      # Mount schema (legacy) and data templates
+      - ./schema:/app/schema
+      - ./data:/app/data
+      # Mount a volume for the SQLite metadata DB
+      - orchestrator-data:/app/db
+      # Mount the externalized schema output directory
+      - ./generated-schema:/app/generated-schema
+    depends_on:
+      - source-db
+      - target-db
+      - shardingsphere-proxy
+    environment:
+      # Tell Spring Boot where to find the external config
+      - SPRING_CONFIG_LOCATION=file:/app/config/application.yaml
+      # Set the working dir for SQLite
+      - SQLITE_DB_PATH=/app/db/orchestrator.db
+
+  source-db:
+    image: mysql:8.0
+    ports:
+      - "3306:3306"
+    environment:
+      - MYSQL_ROOT_PASSWORD=source_password
+      - MYSQL_DATABASE=sourcedb
+    volumes:
+      - ./scripts/init-source.sql:/docker-entrypoint-initdb.d/init.sql
+    command: --default-authentication-plugin=mysql_native_password --binlog-row-image=FULL --gtid-mode=ON --enforce-gtid-consistency=ON --log-slave-updates=ON --server-id=1
+
+  target-db:
+    image: mysql:8.0
+    ports:
+      - "3307:3306" # Map to a different host port
+    environment:
+      - MYSQL_ROOT_PASSWORD=target_password
+      - MYSQL_DATABASE=targetdb
+    command: --default-authentication-plugin=mysql_native_password --server-id=2
+
+  zookeeper:
+    image: zookeeper:3.9
+    ports:
+      - "2181:2181"
+
+  shardingsphere-proxy:
+    image: apache/shardingsphere-proxy:5.5.0
+    ports:
+      - "3309:3307" # Main proxy port (if we were proxying)
+      - "8888:8888" # Admin/DistSQL port
+    volumes:
+      - ./config/shardingsphere-server-template.yaml:/opt/shardingsphere-proxy/conf/server.yaml
+    depends_on:
+      - zookeeper
+
+volumes:
+  orchestrator-data:

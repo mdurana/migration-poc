@@ -1,0 +1,1 @@
+REGISTER MIGRATION SOURCE {{db_definition}}
