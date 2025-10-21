@@ -66,7 +66,7 @@ public class SchemaExecutor {
     }
 
     /**
-     * 2. Parses the generated XML changelog and auto-translates common types.
+     * Parses the generated XML changelog and auto-translates common types.
      * This is a "best-effort" translation for the POC.
      */
     public void normalizeChangelog(JobRequest request, String inputPath, String outputPath) throws Exception {
@@ -113,7 +113,7 @@ public class SchemaExecutor {
             }
         }
         
-        // 5. TODO: Add logic for other objects (e.g., find/replace in <sql> tags for functions)
+        // TODO: Add logic for other objects (e.g., find/replace in <sql> tags for functions)
         // For this POC, we are only handling <column> attributes.
 
         // 6. Write the modified XML to the new output file

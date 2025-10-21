@@ -22,6 +22,7 @@ services:
     depends_on:
       - source-db
       - target-db
+      - target-db-pg
       - shardingsphere-proxy
     environment:
       # Tell Spring Boot where to find the external config
@@ -49,13 +50,25 @@ services:
       - MYSQL_DATABASE=targetdb
     command: --default-authentication-plugin=mysql_native_password --server-id=2
 
+  target-db-pg:
+    image: postgres:15
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=target_password_pg
+      - POSTGRES_DB=targetdb_pg
+    command: postgres -c 'wal_level=logical' # Required for CDC
+
   zookeeper:
     image: zookeeper:3.9
     ports:
       - "2181:2181"
 
   shardingsphere-proxy:
-    image: apache/shardingsphere-proxy:5.5.0
+    # --- UPDATED VERSION TO MATCH POM.XML ---
+    image: apache/shardingsphere-proxy:5.5.2
+    # ----------------------------------------
     ports:
       - "3309:3307" # Main proxy port (if we were proxying)
       - "8888:8888" # Admin/DistSQL port
