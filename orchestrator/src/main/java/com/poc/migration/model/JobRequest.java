@@ -1,10 +1,16 @@
 package com.poc.migration.model;
 
 import lombok.Data;
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import java.util.List;
 
 // This DTO maps to the job-template.json
 @Data
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class JobRequest {
     private String jobName;
     private DbConfig source;

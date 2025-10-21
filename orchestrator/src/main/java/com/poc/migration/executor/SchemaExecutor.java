@@ -11,7 +11,6 @@ import org.springframework.stereotype.Service;
 
 import java.io.FileOutputStream;
 import java.io.PrintStream;
-import java.nio.file.Paths;
 import java.sql.Connection;
 import java.sql.DriverManager;
 
@@ -66,7 +65,7 @@ public class SchemaExecutor {
             
             // We use FileSystemResourceAccessor because the file is on the container's filesystem
             // We point it to the root "/" so it can find the absolute changelogPath
-            FileSystemResourceAccessor resourceAccessor = new FileSystemResourceAccessor(Paths.get("/"));
+            FileSystemResourceAccessor resourceAccessor = new FileSystemResourceAccessor("/");
 
             // changelogPath is an absolute path like /app/generated-schema/job-1.xml
             Liquibase liquibase = new Liquibase(changelogPath, resourceAccessor, database);
