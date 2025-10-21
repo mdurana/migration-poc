@@ -41,6 +41,7 @@ Run the Python script from your host machine. This will connect to the `source-d
 
 ```bash
 python scripts/populate-data.py
+# python3 scripts/populate-data.py
 ```
 
 **Expected Output:**

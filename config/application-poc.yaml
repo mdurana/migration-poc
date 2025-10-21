@@ -12,6 +12,11 @@ spring:
       ddl-auto: update # Automatically create/update metadata tables
     database-platform: org.hibernate.community.dialect.SQLiteDialect
 
+  # Disable Spring Boot's automatic Liquibase execution on startup.
+  # We want to control Liquibase manually via our SchemaExecutor.
+  liquibase:
+    enabled: false
+
 # ShardingSphere Proxy Admin Connection
 shardingsphere:
   admin:
