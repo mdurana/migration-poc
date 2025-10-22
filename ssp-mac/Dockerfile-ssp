@@ -1,0 +1,45 @@
+# =================================================================
+# Dockerfile to build a compatible ShardingSphere Proxy for aarch64
+# =================================================================
+
+# Use a standard, multi-architecture base image with a compatible Java LTS version (Java 25).
+# This is more reliable than the Java version bundled in the official image for aarch64.
+FROM eclipse-temurin:25-jdk-jammy
+
+# Set an argument for the ShardingSphere version to make it easily updatable.
+ARG SHARDINGSPHERE_VERSION=5.5.2
+
+# Set environment variables
+ENV SHARDINGSPHERE_HOME=/opt/shardingsphere-proxy
+ENV PATH=$SHARDINGSPHERE_HOME/bin:$PATH
+
+# Download, verify, and extract the ShardingSphere Proxy binary.
+# Using wget and tar in a single RUN command is efficient for layering.
+RUN apt-get update && apt-get install -y --no-install-recommends wget && \
+    wget https://archive.apache.org/dist/shardingsphere/${SHARDINGSPHERE_VERSION}/apache-shardingsphere-${SHARDINGSPHERE_VERSION}-shardingsphere-proxy-bin.tar.gz && \
+    tar -zxvf apache-shardingsphere-${SHARDINGSPHERE_VERSION}-shardingsphere-proxy-bin.tar.gz && \
+    mv apache-shardingsphere-${SHARDINGSPHERE_VERSION}-shardingsphere-proxy-bin ${SHARDINGSPHERE_HOME} && \
+    rm apache-shardingsphere-${SHARDINGSPHERE_VERSION}-shardingsphere-proxy-bin.tar.gz && \
+    apt-get purge -y wget && \
+    apt-get autoremove -y && \
+    rm -rf /var/lib/apt/lists/*
+
+# The proxy listens on port 3307 by default.
+EXPOSE 3307
+
+# By default, the start.sh script runs the proxy in the background, which is not ideal for containers.
+# We override it to run the Java process directly in the foreground, so logs go to the container's stdout.
+# This makes debugging configuration issues much easier.
+CMD ["java", \
+     "-server", \
+     "-Xms512m", \
+     "-Xmx512m", \
+     "-cp", "/opt/shardingsphere-proxy/conf:/opt/shardingsphere-proxy/lib/*:/opt/shardingsphere-proxy/ext-lib/*", \
+     "org.apache.shardingsphere.proxy.Bootstrap", \
+     "3307", \
+     "/opt/shardingsphere-proxy/conf", \
+     "0.0.0.0"]
+
+# For Mac with Apple Silicon Chip, run this using docker or podman
+# docker build -t my-shardingsphere-proxy:5.5.2 .
+# podman build -t my-shardingsphere-proxy:5.5.2 .

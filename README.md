@@ -31,8 +31,14 @@ This command builds the Java application (using the multi-module `pom.xml`) and 
 
 ```bash
 # For first time run
-# mvn wrapper:wrapper
-# mvn clean package
+mvn wrapper:wrapper
+mvn clean package
+
+# For non-Apple Silicon Chip
+docker-compose up --build -d
+
+# For Mac with Apple Silicon Chip
+cd ssp-mac
 docker-compose up --build -d
 ````
 
@@ -43,11 +49,13 @@ Wait about 30-60 seconds for all services to initialize.
 Run the Python script from your host machine. This will connect to the `source-db` container (via its mapped port `3306`) and load it with 1,000 users and 5,000 orders.
 
 ```bash
-# pip install mysql-connector-python
+# For first time run
+pip install mysql-connector-python
+
 python scripts/populate-data.py
 
 # Or this
-# python3 scripts/populate-data.py
+python3 scripts/populate-data.py
 ```
 
 **Expected Output:**
@@ -55,9 +63,9 @@ python scripts/populate-data.py
 ```
 Connecting to source database...
 Cleared existing data.
-Generating 1000 users...
+Generating 100000 users...
 Users populated successfully.
-Generating 5000 orders...
+Generating 500000 orders...
 Orders populated successfully.
 
 --- Verification ---
