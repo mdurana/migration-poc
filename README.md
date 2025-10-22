@@ -30,6 +30,9 @@ This tool supports both **homogeneous** (MySQL $\rightarrow$ MySQL) and **hetero
 This command builds the Java application (using the multi-module `pom.xml`) and starts all 6 containers in detached mode. The `source-db` will be created with an **empty schema** (no data).
 
 ```bash
+# For first time run
+# mvn wrapper:wrapper
+# mvn clean package
 docker-compose up --build -d
 ````
 
@@ -40,7 +43,10 @@ Wait about 30-60 seconds for all services to initialize.
 Run the Python script from your host machine. This will connect to the `source-db` container (via its mapped port `3306`) and load it with 1,000 users and 5,000 orders.
 
 ```bash
+# pip install mysql-connector-python
 python scripts/populate-data.py
+
+# Or this
 # python3 scripts/populate-data.py
 ```
 
