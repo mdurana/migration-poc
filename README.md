@@ -35,10 +35,12 @@ mvn wrapper:wrapper
 mvn clean package
 
 # For non-Apple Silicon Chip
+rm generated-schema/*.xml
 docker-compose up --build -d
 
 # For Mac with Apple Silicon Chip
 cd ssp-mac
+rm generated-schema/*.xml
 docker-compose up --build -d
 ````
 
@@ -90,6 +92,7 @@ curl -X POST http://localhost:8080/job \
 This is the primary way to watch the migration. The job will run from start to finish without pausing.
 
 ```bash
+# change to proper directory first, cd ssp-mac or cd ..
 docker-compose logs -f orchestrator
 ```
 

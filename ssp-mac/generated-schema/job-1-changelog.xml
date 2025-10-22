@@ -1,0 +1,39 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+    <changeSet author="root (generated)" id="1761109801467-1">
+        <createTable tableName="orders">
+            <column autoIncrement="true" name="order_id" type="INT">
+                <constraints nullable="false" primaryKey="true"/>
+            </column>
+            <column name="user_id" type="INT"/>
+            <column name="product_name" type="VARCHAR(100)"/>
+            <column defaultValueNumeric="1" name="quantity" type="INT"/>
+            <column name="amount" type="DECIMAL(10, 2)"/>
+            <column defaultValueComputed="CURRENT_TIMESTAMP" name="order_date" type="datetime(0)"/>
+            <column name="notes" type="TEXT"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="root (generated)" id="1761109801467-2">
+        <createTable tableName="users">
+            <column autoIncrement="true" name="id" type="INT">
+                <constraints nullable="false" primaryKey="true"/>
+            </column>
+            <column name="name" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="email" type="VARCHAR(255)">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column defaultValueNumeric="1" name="status" remarks="1=Active, 0=Inactive, 2=Pending" type="TINYINT(3)"/>
+            <column defaultValueComputed="CURRENT_TIMESTAMP" name="registered_at" type="datetime(0)"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="root (generated)" id="1761109801467-3">
+        <createIndex associatedWith="" indexName="user_id" tableName="orders">
+            <column name="user_id"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="root (generated)" id="1761109801467-4">
+        <addForeignKeyConstraint baseColumnNames="user_id" baseTableName="orders" constraintName="orders_ibfk_1" deferrable="false" initiallyDeferred="false" onDelete="RESTRICT" onUpdate="RESTRICT" referencedColumnNames="id" referencedTableName="users" validate="true"/>
+    </changeSet>
+</databaseChangeLog>

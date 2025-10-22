@@ -8,11 +8,6 @@ services:
     volumes:
       # Mount the config file
       - ./config/application-poc.yaml:/app/config/application.yaml
-      # Mount the job template for easy access (optional)
-      - ./config/job-template.json:/app/job-template.json
-      # Mount schema (legacy) and data templates
-      - ./schema:/app/schema
-      - ./data:/app/data
       # Mount a volume for the SQLite metadata DB
       - orchestrator-data:/app/db
       # Mount the externalized schema output directory
