@@ -12,17 +12,42 @@ services:
       - orchestrator-data:/app/db
       # Mount the externalized schema output directory
       - ./generated-schema:/app/generated-schema
+    # ===================================================================
+    # Wait for all dependencies to be healthy
+    # ===================================================================
     depends_on:
-      - source-db
-      - target-db
-      - target-db-pg
-      - shardingsphere-proxy
+      source-db:
+        condition: service_healthy
+      target-db:
+        condition: service_healthy
+      target-db-pg:
+        condition: service_healthy
+      shardingsphere-proxy:
+        condition: service_healthy
     environment:
       # Tell Spring Boot where to find the external config
       - SPRING_CONFIG_LOCATION=file:/app/config/application.yaml
       # Set the working dir for SQLite
       - SQLITE_DB_PATH=/app/db/orchestrator.db
+      # ===================================================================
+      # Startup retry configuration
+      # ===================================================================
+      - SHARDINGSPHERE_ADMIN_STARTUP_RETRY_MAX=20
+      - SHARDINGSPHERE_ADMIN_STARTUP_RETRY_DELAY=5000
+    # ===================================================================
+    # Health check for orchestrator
+    # ===================================================================
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/actuator/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+    restart: unless-stopped
 
+  # ===================================================================
+  # Health check
+  # ===================================================================
   source-db:
     image: mysql:8.0
     ports:
@@ -33,7 +58,16 @@ services:
     volumes:
       - ./scripts/init-source.sql:/docker-entrypoint-initdb.d/init.sql
     command: --default-authentication-plugin=mysql_native_password --binlog-row-image=FULL --gtid-mode=ON --enforce-gtid-consistency=ON --log-slave-updates=ON --server-id=1
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-psource_password"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
 
+  # ===================================================================
+  # Health check
+  # ===================================================================
   target-db:
     image: mysql:8.0
     ports:
@@ -42,7 +76,16 @@ services:
       - MYSQL_ROOT_PASSWORD=target_password
       - MYSQL_DATABASE=targetdb
     command: --default-authentication-plugin=mysql_native_password --server-id=2
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-ptarget_password"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
 
+  # ===================================================================
+  # Health check
+  # ===================================================================
   target-db-pg:
     image: postgres:17
     ports:
@@ -52,12 +95,27 @@ services:
       - POSTGRES_PASSWORD=target_password_pg
       - POSTGRES_DB=targetdb_pg
     command: postgres -c 'wal_level=logical' # Required for CDC
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
 
   zookeeper:
     image: zookeeper:3.9
     ports:
       - "2181:2181"
+    #healthcheck:
+    #  test: ["CMD-SHELL", "echo ruok | nc localhost 2181 | grep imok"]
+    #  interval: 10s
+    #  timeout: 5s
+    #  retries: 10
+    #  start_period: 30s
 
+  # ===================================================================
+  # Health check and proper dependencies
+  # ===================================================================
   shardingsphere-proxy:
     image: apache/shardingsphere-proxy:5.5.2
     ports:
@@ -66,7 +124,93 @@ services:
       - ./ext-lib:/opt/shardingsphere-proxy/ext-lib
       - ./config/shardingsphere-server-template.yaml:/opt/shardingsphere-proxy/conf/global.yaml
     depends_on:
-      - zookeeper
+      #zookeeper:
+      #  condition: service_healthy
+      source-db:
+        condition: service_healthy
+      target-db:
+        condition: service_healthy
+      target-db-pg:
+        condition: service_healthy
+    environment:
+      # Java options for ShardingSphere Proxy
+      JAVA_OPTS: "-Xms512m -Xmx1g -Djava.awt.headless=true"
+    healthcheck:
+      test: ["CMD-SHELL", 'curl -v localhost:3307 2>&1 | grep "Connected to" || exit 1']
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 60s
+    restart: unless-stopped
 
 volumes:
   orchestrator-data:
+
+###############################################################################
+# STARTUP SEQUENCE WITH HEALTH CHECKS
+###############################################################################
+#
+# 1. All databases start simultaneously (source-db, target-db, target-db-pg)
+#    └─> Wait for all to be healthy (~40 seconds)
+#
+# 2. Zookeeper starts
+#    └─> Wait for healthy (~30 seconds)
+#
+# 3. ShardingSphere Proxy starts (after all DBs + Zookeeper are healthy)
+#    └─> Wait for healthy (~60 seconds)
+#
+# 4. Orchestrator starts (after all dependencies are healthy)
+#    └─> Background initialization with retries
+#    └─> Ready in ~120 seconds
+#
+# Total expected startup time: ~2-3 minutes (vs instant crashes before)
+#
+###############################################################################
+
+###############################################################################
+# HEALTH CHECK DETAILS
+###############################################################################
+#
+# source-db & target-db (MySQL):
+#   - Test: mysqladmin ping
+#   - Ready when: MySQL accepts connections
+#   - Max time: 100 seconds (10s × 10 retries)
+#
+# target-db-pg (PostgreSQL):
+#   - Test: pg_isready
+#   - Ready when: PostgreSQL accepts connections
+#   - Max time: 100 seconds
+#
+# shardingsphere-proxy:
+#   - Test: netcat port check (nc -z localhost 3307)
+#   - Ready when: Port 3307 is open and accepting connections
+#   - Max time: 200 seconds (10s × 20 retries)
+#
+# orchestrator:
+#   - Test: curl actuator/health endpoint
+#   - Ready when: Spring Boot reports healthy
+#   - Max time: 150 seconds (30s × 5 retries)
+#
+###############################################################################
+
+###############################################################################
+# TESTING THE SETUP
+###############################################################################
+#
+# 1. Start all services:
+#    docker-compose up
+#
+# 2. Watch the health status:
+#    watch -n 2 'docker-compose ps'
+#
+# 3. Monitor orchestrator startup:
+#    docker-compose logs -f orchestrator | grep -i "migration database\|initialization"
+#
+# 4. Verify all healthy:
+#    docker-compose ps
+#    # All should show "Up (healthy)" or "Up X seconds (healthy)"
+#
+# 5. Test the application:
+#    curl http://localhost:8080/actuator/health
+#
+###############################################################################

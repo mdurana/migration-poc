@@ -22,6 +22,8 @@ shardingsphere:
   admin:
     host: shardingsphere-proxy
     port: 3307
+    database: shardingsphere # ShardingSphere-Proxy logical database for migrations
+    migration-db: migration_db # Logical database for migration tasks
     # These creds are set in the shardingsphere-server-template.yaml
     user: root
     password: root
@@ -36,3 +38,13 @@ spring.task.execution:
   pool:
     core-size: 2
     max-size: 10
+
+# For monitoring health
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: always

@@ -32,6 +32,8 @@ This command builds the Java application (using the multi-module `pom.xml`) and 
 ```bash
 # For first time run
 mvn wrapper:wrapper
+
+# When there is a change
 mvn clean package
 
 # For non-Apple Silicon Chip

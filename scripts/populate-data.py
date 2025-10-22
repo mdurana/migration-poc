@@ -10,7 +10,7 @@ DB_CONFIG = {
     'password': 'source_password',
     'database': 'sourcedb'
 }
-NUM_USERS = 100000
+NUM_USERS = 250000
 NUM_ORDERS = 500000
 # ---------------------
 

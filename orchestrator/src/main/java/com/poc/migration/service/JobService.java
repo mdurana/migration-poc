@@ -65,25 +65,22 @@ public class JobService {
         List<String> migrationJobIds = null;
 
         try {
-            // === 1. SCHEMA GENERATION ===
-            updateStatus(jobId, JobStatus.SCHEMA_GENERATING, null);
-            log.info("[Job-{}] Generating schema from source...", jobId);
-            schemaExecutor.generateChangelog(request, generatedChangelogPath);
-            log.info("[Job-{}] Schema generated successfully to {}.", jobId, generatedChangelogPath);
-
             // --- HETEROGENEOUS CHECK ---
             boolean isHomogeneous = Objects.equals(
                     request.getSource().getType(),
                     request.getTarget().getType()
             );
-            
-            String changelogToApply; // Path to the file we will apply
 
             if (isHomogeneous) {
-                log.info("[Job-{}] Homogeneous migration detected ({}). Skipping normalization.", 
+                log.info("[Job-{}] Homogeneous migration detected ({}). Skipping schema generation and normalization.", 
                         jobId, request.getSource().getType());
-                changelogToApply = generatedChangelogPath;
             } else {
+                // === 1. SCHEMA GENERATION ===
+                updateStatus(jobId, JobStatus.SCHEMA_GENERATING, null);
+                log.info("[Job-{}] Generating schema from source...", jobId);
+                schemaExecutor.generateChangelog(request, generatedChangelogPath);
+                log.info("[Job-{}] Schema generated successfully to {}.", jobId, generatedChangelogPath);
+                
                 log.info("[Job-{}] Heterogeneous migration detected ({} -> {}). Starting automated normalization.", 
                         jobId, request.getSource().getType(), request.getTarget().getType());
                 
@@ -91,14 +88,13 @@ public class JobService {
                 updateStatus(jobId, JobStatus.SCHEMA_NORMALIZING, null);
                 schemaExecutor.normalizeChangelog(request, generatedChangelogPath, normalizedChangelogPath);
                 log.info("[Job-{}] Schema normalization complete. Output: {}", jobId, normalizedChangelogPath);
-                changelogToApply = normalizedChangelogPath;
-            }
 
-            // === 3. SCHEMA APPLY ===
-            updateStatus(jobId, JobStatus.SCHEMA_APPLYING, null);
-            log.info("[Job-{}] Applying schema to target database...", jobId);
-            schemaExecutor.applyChangelog(request, changelogToApply);
-            log.info("[Job-{}] Schema applied successfully to target.", jobId);
+                // === 3. SCHEMA APPLY ===
+                updateStatus(jobId, JobStatus.SCHEMA_APPLYING, null);
+                log.info("[Job-{}] Applying schema to target database...", jobId);
+                schemaExecutor.applyChangelog(request, normalizedChangelogPath);
+                log.info("[Job-{}] Schema applied successfully to target.", jobId);
+            }
 
             // === 4. DATA CONFIGURATION ===
             updateStatus(jobId, JobStatus.DATA_CONFIGURING, null);
