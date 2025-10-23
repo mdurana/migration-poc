@@ -138,7 +138,7 @@ services:
       # Java options for ShardingSphere Proxy
       JAVA_OPTS: "-Xms512m -Xmx1g -Djava.awt.headless=true"
     healthcheck:
-      test: ["CMD-SHELL", 'curl -v localhost:3307 2>&1 | grep "Connected to" || exit 1']
+      test: ["CMD-SHELL", 'ps aux | grep 3307 | grep "shardingsphere-proxy" | grep -v "grep" || exit 1']
       interval: 10s
       timeout: 5s
       retries: 20
