@@ -15,8 +15,6 @@ import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.commons.lang3.StringUtils;
-
 import jakarta.annotation.PostConstruct;
 
 @Service
@@ -318,14 +316,14 @@ public class DataExecutor {
         boolean allReady = false;
         int checkCount = 0;
         final int maxChecks = 120; // Max 10 minutes (120 * 5s) for POC purposes only
-        
-        int readyCount = 0;
-        int totalJobs = 0;
 
         while(!allReady && checkCount < maxChecks) {
             checkCount++;
             Thread.sleep(5000); // 5 seconds between checks
             log.info("Migration status check #{}/{}", checkCount, maxChecks);
+
+            int readyCount = 0;
+            int totalJobs = 0;
 
             for (String jobId : migrationJobIds) {
                 log.info("Checking status for migration job: {}", jobId);
