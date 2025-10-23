@@ -132,34 +132,68 @@ public class DataExecutor {
         return DriverManager.getConnection(jdbcUrl, adminUser, adminPassword);
     }
 
+    private boolean migrationSourceExists(String nameOfSrc, String hostOfSrc, String dbOfSrc) throws Exception {
+        boolean alreadyExists = false;
+        String sql = String.format("SHOW MIGRATION SOURCE STORAGE UNITS");
+        
+        try (Connection conn = getAdminConnection(migrationDatabase);
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+            
+            log.info("Checking registered migration source storage units...");
+            
+            while (rs.next()) {
+                String name = rs.getString("name");
+                String host = rs.getString("host");
+                String db = rs.getString("db");
+
+                alreadyExists = nameOfSrc.equals(name) && hostOfSrc.equals(host) && dbOfSrc.equals(db);
+                if (alreadyExists) {
+                    log.info("✓ Migration source storage unit '{}' already registered", nameOfSrc);
+                    break;
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Could not retrieve migration source units: {}", e.getMessage());
+        }
+
+        return alreadyExists;
+    }
+
     /**
      * Registers source and target storage units in ShardingSphere Proxy.
      * This tells the proxy where the actual databases are.
      */
     public void registerSourceAndTarget(JobRequest request) throws Exception {
-        log.info("Registering storage units in database: {}", migrationDatabase);
+        log.info("Registering source/target storage units in database: {}", migrationDatabase);
         
-        // 1. Register Source Storage Unit
-        String sourceUrl = buildJdbcUrl(request.getSource());
-        String registerSourceSQL = String.format("""
-            REGISTER MIGRATION SOURCE STORAGE UNIT source_ds (
-                URL="%s",
-                USER="%s",
-                PASSWORD="%s",
-                PROPERTIES(
-                    "maximumPoolSize"=10,
-                    "idleTimeout"=30000
+        if (migrationSourceExists("source_ds", request.getSource().getHost(), request.getSource().getDatabase())) {
+            log.info("Source storage unit already registered, skipping registration.");
+        } else {
+            log.info("Source storage unit not found, proceeding with registration.");
+        
+            // 1. Register Source Storage Unit
+            String sourceUrl = buildJdbcUrl(request.getSource());
+            String registerSourceSQL = String.format("""
+                REGISTER MIGRATION SOURCE STORAGE UNIT source_ds (
+                    URL="%s",
+                    USER="%s",
+                    PASSWORD="%s",
+                    PROPERTIES(
+                        "maximumPoolSize"=10,
+                        "idleTimeout"=30000
+                    )
                 )
-            )
-            """, sourceUrl, request.getSource().getUser(), request.getSource().getPassword());
-        
-        executeMigrationSQL(registerSourceSQL);
-        log.info("✓ Source storage unit registered");
+                """, sourceUrl, request.getSource().getUser(), request.getSource().getPassword());
+            
+            executeMigrationSQL(registerSourceSQL);
+            log.info("✓ Source storage unit registered");
+        }
 
         // 2. Register Target Storage Unit
         String targetUrl = buildJdbcUrl(request.getTarget());
         String registerTargetSQL = String.format("""
-            REGISTER STORAGE UNIT target_ds (
+            REGISTER STORAGE UNIT IF NOT EXISTS target_ds (
                 URL="%s",
                 USER="%s",
                 PASSWORD="%s",

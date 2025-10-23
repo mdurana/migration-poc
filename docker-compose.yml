@@ -75,6 +75,8 @@ services:
     environment:
       - MYSQL_ROOT_PASSWORD=target_password
       - MYSQL_DATABASE=targetdb
+    volumes:
+      - ./scripts/init-disable-fk.sql:/docker-entrypoint-initdb.d/init.sql
     command: --default-authentication-plugin=mysql_native_password --server-id=2
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-ptarget_password"]

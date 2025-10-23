@@ -84,9 +84,7 @@ Database connection closed.
 Now that the source DB is full of data, trigger the migration. The `config/job-template.json` is pre-configured for a **heterogeneous** (MySQL $\rightarrow$ PostgreSQL) migration.
 
 ```bash
-curl -X POST http://localhost:8080/job \
-     -H "Content-Type: application/json" \
-     -d @config/job-template.json
+curl -X POST http://localhost:8080/job -H "Content-Type: application/json" -d @config/job-template.json
 ```
 
 ### Step 4: Monitor the Logs

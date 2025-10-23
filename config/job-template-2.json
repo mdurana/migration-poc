@@ -1,0 +1,20 @@
+{
+  "jobName": "mysql-to-mysql-migration",
+  "source": {
+    "type": "mysql",
+    "host": "source-db",
+    "port": 3306,
+    "database": "sourcedb",
+    "user": "root",
+    "password": "source_password"
+  },
+  "target": {
+    "type": "mysql",
+    "host": "target-db",
+    "port": 3306,
+    "database": "targetdb",
+    "user": "root",
+    "password": "target_password"
+  },
+  "tablesToMigrate": ["orders"]
+}

@@ -30,8 +30,7 @@ CREATE TABLE orders (
     quantity INT DEFAULT 1,
     amount DECIMAL(10, 2),
     order_date DATETIME DEFAULT CURRENT_TIMESTAMP,
-    notes TEXT,
-    FOREIGN KEY (user_id) REFERENCES users(id)
+    notes TEXT
 );
 
 --
