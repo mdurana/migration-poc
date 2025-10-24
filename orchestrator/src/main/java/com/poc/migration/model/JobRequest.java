@@ -89,7 +89,8 @@ public class JobRequest {
                 return schema;
             }
             // Return default schema based on database type
-            return "postgresql".equalsIgnoreCase(type) ? "public" : database;
+            //return "postgresql".equalsIgnoreCase(type) ? "public" : database;
+            return database;
         }
     }
 }

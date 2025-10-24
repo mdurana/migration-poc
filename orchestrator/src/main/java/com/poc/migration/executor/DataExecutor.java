@@ -227,27 +227,32 @@ public class DataExecutor {
         log.info("Creating migration jobs for {} tables", tables.size());
 
         for (String tableName : tables) {
-            String migrateSQL;
+            // String migrateSQL;
             
-            // Build MIGRATE TABLE command based on database type
-            if ("postgresql".equalsIgnoreCase(request.getTarget().getType())) {
-                // PostgreSQL requires schema qualification
-                String sourceSchema = request.getSource().getSchemaOrDefault();
-                String targetSchema = request.getTarget().getSchemaOrDefault();
+            // // Build MIGRATE TABLE command based on database type
+            // if ("postgresql".equalsIgnoreCase(request.getTarget().getType())) {
+            //     // PostgreSQL requires schema qualification
+            //     String sourceSchema = request.getSource().getSchemaOrDefault();
+            //     String targetSchema = request.getTarget().getSchemaOrDefault();
                 
-                migrateSQL = String.format(
-                    "MIGRATE TABLE source_ds.%s.%s INTO %s.%s",
-                    sourceSchema, tableName, targetSchema, tableName
-                );
-            } else {
-                // MySQL: storage_unit.table_name
-                // Database is already in the JDBC URL of the storage unit
-                migrateSQL = String.format(
+            //     migrateSQL = String.format(
+            //         "MIGRATE TABLE source_ds.%s.%s INTO %s.%s",
+            //         sourceSchema, tableName, targetSchema, tableName
+            //     );
+            // } else {
+            //     // MySQL: storage_unit.table_name
+            //     // Database is already in the JDBC URL of the storage unit
+            //     migrateSQL = String.format(
+            //         "MIGRATE TABLE source_ds.%s INTO %s",
+            //         tableName, tableName
+            //     );
+            // }
+
+            String migrateSQL = String.format(
                     "MIGRATE TABLE source_ds.%s INTO %s",
                     tableName, tableName
                 );
-            }
-            
+
             log.info("Creating migration for table: {}", tableName);
             log.debug("Migration command: {}", migrateSQL);
             

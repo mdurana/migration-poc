@@ -75,14 +75,14 @@ public class JobService {
                 log.info("[Job-{}] Homogeneous migration detected ({}). Skipping schema generation and normalization.", 
                         jobId, request.getSource().getType());
             } else {
+                log.info("[Job-{}] Heterogeneous migration detected ({} -> {}). Starting automated schema generation and normalization.", 
+                jobId, request.getSource().getType(), request.getTarget().getType());
+                
                 // === 1. SCHEMA GENERATION ===
                 updateStatus(jobId, JobStatus.SCHEMA_GENERATING, null);
                 log.info("[Job-{}] Generating schema from source...", jobId);
                 schemaExecutor.generateChangelog(request, generatedChangelogPath);
                 log.info("[Job-{}] Schema generated successfully to {}.", jobId, generatedChangelogPath);
-                
-                log.info("[Job-{}] Heterogeneous migration detected ({} -> {}). Starting automated normalization.", 
-                        jobId, request.getSource().getType(), request.getTarget().getType());
                 
                 // === 2. SCHEMA NORMALIZATION ===
                 updateStatus(jobId, JobStatus.SCHEMA_NORMALIZING, null);
