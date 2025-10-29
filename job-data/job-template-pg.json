@@ -1,0 +1,20 @@
+{
+  "jobName": "mysql-to-postgresql-migration",
+  "source": {
+    "type": "mysql",
+    "host": "mysql-source-db",
+    "port": 3306,
+    "database": "mysql_db",
+    "user": "root",
+    "password": "root"
+  },
+  "target": {
+    "type": "postgresql",
+    "host": "pg-target-db",
+    "port": 5432,
+    "database": "pg_db",
+    "user": "postgres",
+    "password": "postgres"
+  },
+  "tablesToMigrate": ["users", "orders"]
+}

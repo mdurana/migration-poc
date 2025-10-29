@@ -1,0 +1,20 @@
+{
+  "jobName": "postgresql-to-postgresql-migration",
+  "source": {
+    "type": "postgresql",
+    "host": "pg-source-db",
+    "port": 5432,
+    "database": "pg_db",
+    "user": "postgres",
+    "password": "postgres"
+  },
+  "target": {
+    "type": "postgresql",
+    "host": "pg-target-db",
+    "port": 5432,
+    "database": "pg_db",
+    "user": "postgres",
+    "password": "postgres"
+  },
+  "tablesToMigrate": ["users", "orders"]
+}

@@ -71,8 +71,10 @@ public class JobService {
                     request.getTarget().getType()
             );
 
-            if (isHomogeneous) {
-                log.info("[Job-{}] Homogeneous migration detected ({}). Skipping schema generation and normalization.", 
+            boolean isHomogeneousMySQL = isHomogeneous && request.getSource().getType().equalsIgnoreCase("mysql");
+
+            if (isHomogeneousMySQL) {
+                log.info("[Job-{}] Homogeneous MySQL migration detected ({}). Skipping schema generation and normalization.", 
                         jobId, request.getSource().getType());
             } else {
                 log.info("[Job-{}] Heterogeneous migration detected ({} -> {}). Starting automated schema generation and normalization.", 

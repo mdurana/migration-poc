@@ -8,19 +8,22 @@ services:
     volumes:
       # Mount the config file
       - ../config/application-poc.yaml:/app/config/application.yaml
+      - ../job-data:/app/job-data
       # Mount a volume for the SQLite metadata DB
       - orchestrator-data:/app/db
       # Mount the externalized schema output directory
-      - ./generated-schema:/app/generated-schema
+      - ../generated-schema:/app/generated-schema
     # ===================================================================
     # Wait for all dependencies to be healthy
     # ===================================================================
     depends_on:
-      source-db:
+      mysql-source-db:
         condition: service_healthy
-      target-db:
+      mysql-target-db:
         condition: service_healthy
-      target-db-pg:
+      pg-source-db:
+        condition: service_healthy
+      pg-target-db:
         condition: service_healthy
       shardingsphere-proxy:
         condition: service_healthy
@@ -46,56 +49,77 @@ services:
     restart: unless-stopped
 
   # ===================================================================
-  # Health check
+  # Source DB - MySQL 8.0
   # ===================================================================
-  source-db:
+  mysql-source-db:
     image: mysql:8.0
     ports:
       - "3306:3306"
     environment:
-      - MYSQL_ROOT_PASSWORD=source_password
-      - MYSQL_DATABASE=sourcedb
+      - MYSQL_ROOT_PASSWORD=root
+      - MYSQL_DATABASE=mysql_db
     volumes:
-      - ../scripts/init-source.sql:/docker-entrypoint-initdb.d/init.sql
+      - ../scripts/init-mysql.sql:/docker-entrypoint-initdb.d/init.sql
     command: --default-authentication-plugin=mysql_native_password --binlog-row-image=FULL --gtid-mode=ON --enforce-gtid-consistency=ON --log-slave-updates=ON --server-id=1
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-psource_password"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot"]
       interval: 10s
       timeout: 5s
       retries: 10
       start_period: 40s
 
   # ===================================================================
-  # Health check
+  # Target DB - MySQL 8.0
   # ===================================================================
-  target-db:
+  mysql-target-db:
     image: mysql:8.0
     ports:
       - "3307:3306" # Map to a different host port
     environment:
-      - MYSQL_ROOT_PASSWORD=target_password
-      - MYSQL_DATABASE=targetdb
+      - MYSQL_ROOT_PASSWORD=root
+      - MYSQL_DATABASE=mysql_db
     volumes:
       - ../scripts/init-disable-fk.sql:/docker-entrypoint-initdb.d/init.sql
     command: --default-authentication-plugin=mysql_native_password --server-id=2
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-ptarget_password"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot"]
       interval: 10s
       timeout: 5s
       retries: 10
       start_period: 40s
 
   # ===================================================================
-  # Health check
+  # Source DB - PostgreSQL
   # ===================================================================
-  target-db-pg:
-    image: postgres:17
+  pg-source-db:
+    image: postgres:11
     ports:
       - "15432:5432"
     environment:
       - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=target_password_pg
-      - POSTGRES_DB=targetdb_pg
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=pg_db
+    volumes:
+      - ../scripts/init-pg.sql:/docker-entrypoint-initdb.d/init.sql
+    command: postgres -c 'wal_level=logical' # Required for CDC
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
+
+  # ===================================================================
+  # Target DB - PostgreSQL
+  # ===================================================================
+  pg-target-db:
+    image: postgres:17
+    ports:
+      - "15433:5432"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=pg_db
     command: postgres -c 'wal_level=logical' # Required for CDC
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
@@ -130,11 +154,13 @@ services:
     depends_on:
       #zookeeper:
       #  condition: service_healthy
-      source-db:
+      mysql-source-db:
         condition: service_healthy
-      target-db:
+      mysql-target-db:
         condition: service_healthy
-      target-db-pg:
+      pg-source-db:
+        condition: service_healthy
+      pg-target-db:
         condition: service_healthy
     environment:
       # Java options for ShardingSphere Proxy

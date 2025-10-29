@@ -1,48 +1,214 @@
 Exisitng bug: https://github.com/apache/shardingsphere/issues/35750
 
 apache.shardingsphere.data.pipeline.core.exception.PipelineInternalException: java.util.concurrent.ExecutionException: java.lang.NullPointerException
-        at org.apache.shardingsphere.data.pipeline.core.execute.PipelineExecuteEngine.trigger(PipelineExecuteEngine.java:137)
-        at org.apache.shardingsphere.data.pipeline.core.task.runner.TransmissionTasksRunner.executeInventoryTasks(TransmissionTasksRunner.java:90)
-        at org.apache.shardingsphere.data.pipeline.core.task.runner.TransmissionTasksRunner.start(TransmissionTasksRunner.java:77)
-        at org.apache.shardingsphere.data.pipeline.core.job.executor.DistributedPipelineJobExecutor.execute(DistributedPipelineJobExecutor.java:110)
-        at org.apache.shardingsphere.data.pipeline.core.job.executor.DistributedPipelineJobExecutor.execute(DistributedPipelineJobExecutor.java:80)
-        at org.apache.shardingsphere.data.pipeline.scenario.migration.MigrationJob.execute(MigrationJob.java:43)
-        at org.apache.shardingsphere.elasticjob.simple.executor.SimpleJobExecutor.process(SimpleJobExecutor.java:33)
-        at org.apache.shardingsphere.elasticjob.simple.executor.SimpleJobExecutor.process(SimpleJobExecutor.java:29)
-        at org.apache.shardingsphere.elasticjob.executor.ElasticJobExecutor.process(ElasticJobExecutor.java:173)
-        at org.apache.shardingsphere.elasticjob.executor.ElasticJobExecutor.process(ElasticJobExecutor.java:142)
-        at org.apache.shardingsphere.elasticjob.executor.ElasticJobExecutor.execute(ElasticJobExecutor.java:124)
-        at org.apache.shardingsphere.elasticjob.executor.ElasticJobExecutor.execute(ElasticJobExecutor.java:100)
-        at org.apache.shardingsphere.elasticjob.lite.internal.schedule.LiteJob.execute(LiteJob.java:35)
-        at org.quartz.core.JobRunShell.run(JobRunShell.java:202)
-        at org.quartz.simpl.SimpleThreadPool$WorkerThread.run(SimpleThreadPool.java:573)
+       at org.apache.shardingsphere.data.pipeline.core.execute.PipelineExecuteEngine.trigger(PipelineExecuteEngine.java:137)
+       at org.apache.shardingsphere.data.pipeline.core.task.runner.TransmissionTasksRunner.executeInventoryTasks(TransmissionTasksRunner.java:90)
+       at org.apache.shardingsphere.data.pipeline.core.task.runner.TransmissionTasksRunner.start(TransmissionTasksRunner.java:77)
+       at org.apache.shardingsphere.data.pipeline.core.job.executor.DistributedPipelineJobExecutor.execute(DistributedPipelineJobExecutor.java:110)
+       at org.apache.shardingsphere.data.pipeline.core.job.executor.DistributedPipelineJobExecutor.execute(DistributedPipelineJobExecutor.java:80)
+       at org.apache.shardingsphere.data.pipeline.scenario.migration.MigrationJob.execute(MigrationJob.java:43)
+       at org.apache.shardingsphere.elasticjob.simple.executor.SimpleJobExecutor.process(SimpleJobExecutor.java:33)
+       at org.apache.shardingsphere.elasticjob.simple.executor.SimpleJobExecutor.process(SimpleJobExecutor.java:29)
+       at org.apache.shardingsphere.elasticjob.executor.ElasticJobExecutor.process(ElasticJobExecutor.java:173)
+       at org.apache.shardingsphere.elasticjob.executor.ElasticJobExecutor.process(ElasticJobExecutor.java:142)
+       at org.apache.shardingsphere.elasticjob.executor.ElasticJobExecutor.execute(ElasticJobExecutor.java:124)
+       at org.apache.shardingsphere.elasticjob.executor.ElasticJobExecutor.execute(ElasticJobExecutor.java:100)
+       at org.apache.shardingsphere.elasticjob.lite.internal.schedule.LiteJob.execute(LiteJob.java:35)
+       at org.quartz.core.JobRunShell.run(JobRunShell.java:202)
+       at org.quartz.simpl.SimpleThreadPool$WorkerThread.run(SimpleThreadPool.java:573)
 Caused by: java.util.concurrent.ExecutionException: java.lang.NullPointerException
-        at java.base/java.util.concurrent.CompletableFuture.wrapInExecutionException(CompletableFuture.java:345)
-        at java.base/java.util.concurrent.CompletableFuture.reportGet(CompletableFuture.java:440)
-        at java.base/java.util.concurrent.CompletableFuture.get(CompletableFuture.java:2094)
-        at org.apache.shardingsphere.data.pipeline.core.execute.PipelineExecuteEngine.trigger(PipelineExecuteEngine.java:133)
+       at java.base/java.util.concurrent.CompletableFuture.wrapInExecutionException(CompletableFuture.java:345)
+       at java.base/java.util.concurrent.CompletableFuture.reportGet(CompletableFuture.java:440)
+       at java.base/java.util.concurrent.CompletableFuture.get(CompletableFuture.java:2094)
+       at org.apache.shardingsphere.data.pipeline.core.execute.PipelineExecuteEngine.trigger(PipelineExecuteEngine.java:133)
         ... 14 more
 Caused by: java.lang.NullPointerException
-        at java.base/java.util.Objects.requireNonNull(Objects.java:220)
-        at java.base/java.util.Optional.of(Optional.java:113)
-        at org.apache.shardingsphere.data.pipeline.core.importer.ImporterConfiguration.findSchemaName(ImporterConfiguration.java:80)
-        at org.apache.shardingsphere.data.pipeline.core.importer.sink.type.PipelineDataSourceSink.executeBatchInsert(PipelineDataSourceSink.java:130)
-        at org.apache.shardingsphere.data.pipeline.core.importer.sink.type.PipelineDataSourceSink.doWrite(PipelineDataSourceSink.java:113)
-        at org.apache.shardingsphere.data.pipeline.core.importer.sink.type.PipelineDataSourceSink.batchWrite(PipelineDataSourceSink.java:97)
-        at org.apache.shardingsphere.data.pipeline.core.importer.sink.type.PipelineDataSourceSink.write(PipelineDataSourceSink.java:83)
-        at org.apache.shardingsphere.data.pipeline.core.importer.SingleChannelConsumerImporter.runBlocking(SingleChannelConsumerImporter.java:55)
-        at org.apache.shardingsphere.data.pipeline.core.execute.AbstractPipelineLifecycleRunnable.start(AbstractPipelineLifecycleRunnable.java:50)
-        at org.apache.shardingsphere.data.pipeline.core.execute.AbstractPipelineLifecycleRunnable.run(AbstractPipelineLifecycleRunnable.java:81)
-        at java.base/java.util.concurrent.CompletableFuture$AsyncRun.run(CompletableFuture.java:1825)
-        at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1090)
-        at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:614)
-        at java.base/java.lang.Thread.run(Thread.java:1474)
+       at java.base/java.util.Objects.requireNonNull(Objects.java:220)
+       at java.base/java.util.Optional.of(Optional.java:113)
+       at org.apache.shardingsphere.data.pipeline.core.importer.ImporterConfiguration.findSchemaName(ImporterConfiguration.java:80)
+       at org.apache.shardingsphere.data.pipeline.core.importer.sink.type.PipelineDataSourceSink.executeBatchInsert(PipelineDataSourceSink.java:130)
+       at org.apache.shardingsphere.data.pipeline.core.importer.sink.type.PipelineDataSourceSink.doWrite(PipelineDataSourceSink.java:113)
+       at org.apache.shardingsphere.data.pipeline.core.importer.sink.type.PipelineDataSourceSink.batchWrite(PipelineDataSourceSink.java:97)
+       at org.apache.shardingsphere.data.pipeline.core.importer.sink.type.PipelineDataSourceSink.write(PipelineDataSourceSink.java:83)
+       at org.apache.shardingsphere.data.pipeline.core.importer.SingleChannelConsumerImporter.runBlocking(SingleChannelConsumerImporter.java:55)
+       at org.apache.shardingsphere.data.pipeline.core.execute.AbstractPipelineLifecycleRunnable.start(AbstractPipelineLifecycleRunnable.java:50)
+       at org.apache.shardingsphere.data.pipeline.core.execute.AbstractPipelineLifecycleRunnable.run(AbstractPipelineLifecycleRunnable.java:81)
+       at java.base/java.util.concurrent.CompletableFuture$AsyncRun.run(CompletableFuture.java:1825)
+       at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1090)
+       at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:614)
+       at java.base/java.lang.Thread.run(Thread.java:1474)
  
  org.apache.shardingsphere.data.pipeline.core.exception.PipelineInternalException: java.util.concurrent.ExecutionException: java.lang.NullPointerException
-        at org.apache.shardingsphere.data.pipeline.core.execute.PipelineExecuteEngine.trigger(PipelineExecuteEngine.java:137)
-        at org.apache.shardingsphere.data.pipeline.core.task.runner.TransmissionTasksRunner.executeInventoryTasks(TransmissionTasksRunner.java:90)
-        at org.apache.shardingsphere.data.pipeline.core.task.runner.TransmissionTasksRunner.start(TransmissionTasksRunner.java:77)
-        at org.apache.shardingsphere.data.pipeline.core.job.executor.DistributedPipelineJobExecutor.execute(DistributedPipelineJobExecutor.java:110)
+       at org.apache.shardingsphere.data.pipeline.core.execute.PipelineExecuteEngine.trigger(PipelineExecuteEngine.java:137)
+       at org.apache.shardingsphere.data.pipeline.core.task.runner.TransmissionTasksRunner.executeInventoryTasks(TransmissionTasksRunner.java:90)
+       at org.apache.shardingsphere.data.pipeline.core.task.runner.TransmissionTasksRunner.start(TransmissionTasksRunner.java:77)
+       at org.apache.shardingsphere.data.pipeline.core.job.executor.DistributedPipelineJobExecutor.execute(DistributedPipelineJobExecutor.java:110)
+       at org.apache.shardingsphere.data.pipeline.core.job.executor.DistributedPipelineJobExecutor.execute(DistributedPipelineJobExecutor.java:80)
+       at org.apache.shardingsphere.data.pipeline.scenario.migration.MigrationJob.execute(MigrationJob.java:43)
+       at org.apache.shardingsphere.elasticjob.simple.executor.SimpleJobExecutor.process(SimpleJobExecutor.java:33)
+       at org.apache.shardingsphere.elasticjob.simple.executor.SimpleJobExecutor.process(SimpleJobExecutor.java:29)
+       at org.apache.shardingsphere.elasticjob.executor.ElasticJobExecutor.process(ElasticJobExecutor.java:173)
+       at org.apache.shardingsphere.elasticjob.executor.ElasticJobExecutor.process(ElasticJobExecutor.java:142)
+       at org.apache.shardingsphere.elasticjob.executor.ElasticJobExecutor.execute(ElasticJobExecutor.java:124)
+       at org.apache.shardingsphere.elasticjob.executor.ElasticJobExecutor.execute(ElasticJobExecutor.java:100)
+       at org.apache.shardingsphere.elasticjob.lite.internal.schedule.LiteJob.execute(LiteJob.java:35)
+       at org.quartz.core.JobRunShell.run(JobRunShell.java:202)
+       at org.quartz.simpl.SimpleThreadPool$WorkerThread.run(SimpleThreadPool.java:573)
+Caused by: java.util.concurrent.ExecutionException: java.lang.NullPointerException
+       at java.base/java.util.concurrent.CompletableFuture.wrapInExecutionException(CompletableFuture.java:345)
+       at java.base/java.util.concurrent.CompletableFuture.reportGet(CompletableFuture.java:440)
+       at java.base/java.util.concurrent.CompletableFuture.get(CompletableFuture.java:2094)
+       at org.apache.shardingsphere.data.pipeline.core.execute.PipelineExecuteEngine.trigger(PipelineExecuteEngine.java:133)
+        ... 14 more
+Caused by: java.lang.NullPointerException
+       at java.base/java.util.Objects.requireNonNull(Objects.java:220)
+       at java.base/java.util.Optional.of(Optional.java:113)
+       at org.apache.shardingsphere.data.pipeline.core.importer.ImporterConfiguration.findSchemaName(ImporterConfiguration.java:80)
+       at org.apache.shardingsphere.data.pipeline.core.importer.sink.type.PipelineDataSourceSink.executeBatchInsert(PipelineDataSourceSink.java:130)
+       at org.apache.shardingsphere.data.pipeline.core.importer.sink.type.PipelineDataSourceSink.doWrite(PipelineDataSourceSink.java:113)
+       at org.apache.shardingsphere.data.pipeline.core.importer.sink.type.PipelineDataSourceSink.batchWrite(PipelineDataSourceSink.java:97)
+       at org.apache.shardingsphere.data.pipeline.core.importer.sink.type.PipelineDataSourceSink.write(PipelineDataSourceSink.java:83)
+       at org.apache.shardingsphere.data.pipeline.core.importer.SingleChannelConsumerImporter.runBlocking(SingleChannelConsumerImporter.java:55)
+       at org.apache.shardingsphere.data.pipeline.core.execute.AbstractPipelineLifecycleRunnable.start(AbstractPipelineLifecycleRunnable.java:50)
+       at org.apache.shardingsphere.data.pipeline.core.execute.AbstractPipelineLifecycleRunnable.run(AbstractPipelineLifecycleRunnable.java:81)
+       at java.base/java.util.concurrent.CompletableFuture$AsyncRun.run(CompletableFuture.java:1825)
+       at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1090)
+       at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:614)
+       at java.base/java.lang.Thread.run(Thread.java:1474)
+
+================
+
+org.postgresql.util.PSQLException: ERROR: column "datlastsysoid" does not exist
+  Position: 21
+       at org.apache.shardingsphere.data.pipeline.postgresql.sqlbuilder.ddl.PostgreSQLDDLTemplateExecutor.executeByTemplateForSingleRow(PostgreSQLDDLTemplateExecutor.java:99)
+       at org.apache.shardingsphere.data.pipeline.postgresql.sqlbuilder.ddl.table.PostgreSQLTablePropertiesLoader.fetchDatabaseId(PostgreSQLTablePropertiesLoader.java:63)
+       at org.apache.shardingsphere.data.pipeline.postgresql.sqlbuilder.ddl.table.PostgreSQLTablePropertiesLoader.load(PostgreSQLTablePropertiesLoader.java:54)
+       at org.apache.shardingsphere.data.pipeline.postgresql.sqlbuilder.PostgreSQLPipelineSQLBuilder.loadMaterials(PostgreSQLPipelineSQLBuilder.java:95)
+       at org.apache.shardingsphere.data.pipeline.postgresql.sqlbuilder.PostgreSQLPipelineSQLBuilder.buildCreateTableSQLs(PostgreSQLPipelineSQLBuilder.java:86)
+       at org.apache.shardingsphere.data.pipeline.core.metadata.generator.PipelineDDLGenerator.generateLogicDDL(PipelineDDLGenerator.java:54)
+       at org.apache.shardingsphere.data.pipeline.core.preparer.datasource.PipelineJobDataSourcePreparer.getCreateTargetTableSQL(PipelineJobDataSourcePreparer.java:138)
+       at org.apache.shardingsphere.data.pipeline.core.preparer.datasource.PipelineJobDataSourcePreparer.prepareTargetTables(PipelineJobDataSourcePreparer.java:119)
+       at org.apache.shardingsphere.data.pipeline.scenario.migration.preparer.MigrationJobPreparer.prepareTarget(MigrationJobPreparer.java:162)
+       at org.apache.shardingsphere.data.pipeline.scenario.migration.preparer.MigrationJobPreparer.prepareAndCheckTarget(MigrationJobPreparer.java:145)
+       at org.apache.shardingsphere.data.pipeline.scenario.migration.preparer.MigrationJobPreparer.prepareAndCheckTargetWithLock(MigrationJobPreparer.java:130)
+       at org.apache.shardingsphere.data.pipeline.scenario.migration.preparer.MigrationJobPreparer.prepare(MigrationJobPreparer.java:96)
+       at org.apache.shardingsphere.data.pipeline.scenario.migration.MigrationJobExecutorCallback.prepare(MigrationJobExecutorCallback.java:104)
+       at org.apache.shardingsphere.data.pipeline.scenario.migration.MigrationJobExecutorCallback.prepare(MigrationJobExecutorCallback.java:55)
+       at org.apache.shardingsphere.data.pipeline.core.job.executor.DistributedPipelineJobExecutor.prepare(DistributedPipelineJobExecutor.java:125)
+       at org.apache.shardingsphere.data.pipeline.core.job.executor.DistributedPipelineJobExecutor.execute(DistributedPipelineJobExecutor.java:108)
+       at org.apache.shardingsphere.data.pipeline.core.job.executor.DistributedPipelineJobExecutor.execute(DistributedPipelineJobExecutor.java:80)
+       at org.apache.shardingsphere.data.pipeline.scenario.migration.MigrationJob.execute(MigrationJob.java:43)
+       at org.apache.shardingsphere.elasticjob.simple.executor.SimpleJobExecutor.process(SimpleJobExecutor.java:33)
+       at org.apache.shardingsphere.elasticjob.simple.executor.SimpleJobExecutor.process(SimpleJobExecutor.java:29)
+       at org.apache.shardingsphere.elasticjob.executor.ElasticJobExecutor.process(ElasticJobExecutor.java:173)
+       at org.apache.shardingsphere.elasticjob.executor.ElasticJobExecutor.process(ElasticJobExecutor.java:142)
+       at org.apache.shardingsphere.elasticjob.executor.ElasticJobExecutor.execute(ElasticJobExecutor.java:124)
+       at org.apache.shardingsphere.elasticjob.executor.ElasticJobExecutor.execute(ElasticJobExecutor.java:100)
+       at org.apache.shardingsphere.elasticjob.lite.internal.schedule.LiteJob.execute(LiteJob.java:35)
+       at org.quartz.core.JobRunShell.run(JobRunShell.java:202)
+       at org.quartz.simpl.SimpleThreadPool$WorkerThread.run(SimpleThreadPool.java:573)
+Caused by: org.postgresql.util.PSQLException: ERROR: column "datlastsysoid" does not exist
+  Position: 21
+       at org.postgresql.core.v3.QueryExecutorImpl.receiveErrorResponse(QueryExecutorImpl.java:2725)
+       at org.postgresql.core.v3.QueryExecutorImpl.processResults(QueryExecutorImpl.java:2412)
+       at org.postgresql.core.v3.QueryExecutorImpl.execute(QueryExecutorImpl.java:371)
+       at org.postgresql.jdbc.PgStatement.executeInternal(PgStatement.java:502)
+       at org.postgresql.jdbc.PgStatement.execute(PgStatement.java:419)
+       at org.postgresql.jdbc.PgStatement.executeWithFlags(PgStatement.java:341)
+       at org.postgresql.jdbc.PgStatement.executeCachedSql(PgStatement.java:326)
+       at org.postgresql.jdbc.PgStatement.executeWithFlags(PgStatement.java:302)
+       at org.postgresql.jdbc.PgStatement.executeQuery(PgStatement.java:251)
+       at com.zaxxer.hikari.pool.ProxyStatement.executeQuery(ProxyStatement.java:110)
+       at com.zaxxer.hikari.pool.HikariProxyStatement.executeQuery(HikariProxyStatement.java)
+       at org.apache.shardingsphere.data.pipeline.postgresql.sqlbuilder.ddl.PostgreSQLDDLTemplateExecutor.executeByTemplateForSingleRow(PostgreSQLDDLTemplateExecutor.java:96)
+        ... 26 common frames omitted
+[ERROR] 2025-10-24 10:31:31.698 [j0102p000076a02af15665226d9c37926380dd71c6_Worker-1] o.a.s.d.p.c.j.e.DistributedPipelineJobExecutor - Job j0102p000076a02af15665226d9c37926380dd71c6-0 execution failed.
+org.apache.shardingsphere.infra.exception.core.external.sql.type.wrapper.SQLWrapperException: 
+More details: org.postgresql.util.PSQLException: ERROR: column "datlastsysoid" does not exist
+  Position: 21
+       at org.apache.shardingsphere.data.pipeline.postgresql.sqlbuilder.ddl.PostgreSQLDDLTemplateExecutor.executeByTemplateForSingleRow(PostgreSQLDDLTemplateExecutor.java:99)
+       at org.apache.shardingsphere.data.pipeline.postgresql.sqlbuilder.ddl.table.PostgreSQLTablePropertiesLoader.fetchDatabaseId(PostgreSQLTablePropertiesLoader.java:63)
+       at org.apache.shardingsphere.data.pipeline.postgresql.sqlbuilder.ddl.table.PostgreSQLTablePropertiesLoader.load(PostgreSQLTablePropertiesLoader.java:54)
+       at org.apache.shardingsphere.data.pipeline.postgresql.sqlbuilder.PostgreSQLPipelineSQLBuilder.loadMaterials(PostgreSQLPipelineSQLBuilder.java:95)
+       at org.apache.shardingsphere.data.pipeline.postgresql.sqlbuilder.PostgreSQLPipelineSQLBuilder.buildCreateTableSQLs(PostgreSQLPipelineSQLBuilder.java:86)
+       at org.apache.shardingsphere.data.pipeline.core.metadata.generator.PipelineDDLGenerator.generateLogicDDL(PipelineDDLGenerator.java:54)
+       at org.apache.shardingsphere.data.pipeline.core.preparer.datasource.PipelineJobDataSourcePreparer.getCreateTargetTableSQL(PipelineJobDataSourcePreparer.java:138)
+       at org.apache.shardingsphere.data.pipeline.core.preparer.datasource.PipelineJobDataSourcePreparer.prepareTargetTables(PipelineJobDataSourcePreparer.java:119)
+       at org.apache.shardingsphere.data.pipeline.scenario.migration.preparer.MigrationJobPreparer.prepareTarget(MigrationJobPreparer.java:162)
+       at org.apache.shardingsphere.data.pipeline.scenario.migration.preparer.MigrationJobPreparer.prepareAndCheckTarget(MigrationJobPreparer.java:145)
+       at org.apache.shardingsphere.data.pipeline.scenario.migration.preparer.MigrationJobPreparer.prepareAndCheckTargetWithLock(MigrationJobPreparer.java:130)
+       at org.apache.shardingsphere.data.pipeline.scenario.migration.preparer.MigrationJobPreparer.prepare(MigrationJobPreparer.java:96)
+       at org.apache.shardingsphere.data.pipeline.scenario.migration.MigrationJobExecutorCallback.prepare(MigrationJobExecutorCallback.java:104)
+       at org.apache.shardingsphere.data.pipeline.scenario.migration.MigrationJobExecutorCallback.prepare(MigrationJobExecutorCallback.java:55)
+       at org.apache.shardingsphere.data.pipeline.core.job.executor.DistributedPipelineJobExecutor.prepare(DistributedPipelineJobExecutor.java:125)
+       at org.apache.shardingsphere.data.pipeline.core.job.executor.DistributedPipelineJobExecutor.execute(DistributedPipelineJobExecutor.java:108)
+       at org.apache.shardingsphere.data.pipeline.core.job.executor.DistributedPipelineJobExecutor.execute(DistributedPipelineJobExecutor.java:80)
+       at org.apache.shardingsphere.data.pipeline.scenario.migration.MigrationJob.execute(MigrationJob.java:43)
+       at org.apache.shardingsphere.elasticjob.simple.executor.SimpleJobExecutor.process(SimpleJobExecutor.java:33)
+       at org.apache.shardingsphere.elasticjob.simple.executor.SimpleJobExecutor.process(SimpleJobExecutor.java:29)
+       at org.apache.shardingsphere.elasticjob.executor.ElasticJobExecutor.process(ElasticJobExecutor.java:173)
+       at org.apache.shardingsphere.elasticjob.executor.ElasticJobExecutor.process(ElasticJobExecutor.java:142)
+       at org.apache.shardingsphere.elasticjob.executor.ElasticJobExecutor.execute(ElasticJobExecutor.java:124)
+       at org.apache.shardingsphere.elasticjob.executor.ElasticJobExecutor.execute(ElasticJobExecutor.java:100)
+       at org.apache.shardingsphere.elasticjob.lite.internal.schedule.LiteJob.execute(LiteJob.java:35)
+       at org.quartz.core.JobRunShell.run(JobRunShell.java:202)
+       at org.quartz.simpl.SimpleThreadPool$WorkerThread.run(SimpleThreadPool.java:573)
+Caused by: org.postgresql.util.PSQLException: ERROR: column "datlastsysoid" does not exist
+  Position: 21
+       at org.postgresql.core.v3.QueryExecutorImpl.receiveErrorResponse(QueryExecutorImpl.java:2725)
+       at org.postgresql.core.v3.QueryExecutorImpl.processResults(QueryExecutorImpl.java:2412)
+       at org.postgresql.core.v3.QueryExecutorImpl.execute(QueryExecutorImpl.java:371)
+       at org.postgresql.jdbc.PgStatement.executeInternal(PgStatement.java:502)
+       at org.postgresql.jdbc.PgStatement.execute(PgStatement.java:419)
+       at org.postgresql.jdbc.PgStatement.executeWithFlags(PgStatement.java:341)
+       at org.postgresql.jdbc.PgStatement.executeCachedSql(PgStatement.java:326)
+       at org.postgresql.jdbc.PgStatement.executeWithFlags(PgStatement.java:302)
+       at org.postgresql.jdbc.PgStatement.executeQuery(PgStatement.java:251)
+       at com.zaxxer.hikari.pool.ProxyStatement.executeQuery(ProxyStatement.java:110)
+       at com.zaxxer.hikari.pool.HikariProxyStatement.executeQuery(HikariProxyStatement.java)
+       at org.apache.shardingsphere.data.pipeline.postgresql.sqlbuilder.ddl.PostgreSQLDDLTemplateExecutor.executeByTemplateForSingleRow(PostgreSQLDDLTemplateExecutor.java:96)
+        ... 26 common frames omitted
+
+org.apache.shardingsphere.infra.exception.dialect.exception.syntax.sql.DialectSQLParsingException: You have an error in your SQL syntax: CREATE TABLE IF NOT EXISTS public.orders
+(
+order_id integer NOT NULL DEFAULT nextval('orders_order_id_seq'::regclass)
+,
+user_id integer
+,
+product_name character varying(100) COLLATE pg_catalog."default"
+,
+quantity integer DEFAULT 1
+,
+amount numeric(10,2)
+,
+order_date timestamp without time zone DEFAULT CURRENT_TIMESTAMP
+,
+notes text COLLATE pg_catalog."default"
+,
+CONSTRAINT orders_pkey PRIMARY KEY (
+order_id)
+
+
+
+)
+WITH (
+OIDS = FALSE)
+TABLESPACE pg_default, null
+        at org.apache.shardingsphere.infra.parser.ShardingSphereSQLParserEngine.getException(ShardingSphereSQLParserEngine.java:66)
+        at org.apache.shardingsphere.infra.parser.ShardingSphereSQLParserEngine.parse(ShardingSphereSQLParserEngine.java:59)
+        at org.apache.shardingsphere.data.pipeline.core.metadata.generator.PipelineDDLDecorator.parseSQL(PipelineDDLDecorator.java:105)
+        at org.apache.shardingsphere.data.pipeline.core.metadata.generator.PipelineDDLDecorator.decorateActualSQL(PipelineDDLDecorator.java:84)
+        at org.apache.shardingsphere.data.pipeline.core.metadata.generator.PipelineDDLDecorator.decorate(PipelineDDLDecorator.java:75)
+        at org.apache.shardingsphere.data.pipeline.core.preparer.datasource.PipelineJobDataSourcePreparer.decorateTargetTableSQL(PipelineJobDataSourcePreparer.java:145)
+        at org.apache.shardingsphere.data.pipeline.core.preparer.datasource.PipelineJobDataSourcePreparer.prepareTargetTables(PipelineJobDataSourcePreparer.java:122)
+        at org.apache.shardingsphere.data.pipeline.scenario.migration.preparer.MigrationJobPreparer.prepareTarget(MigrationJobPreparer.java:162)
+        at org.apache.shardingsphere.data.pipeline.scenario.migration.preparer.MigrationJobPreparer.prepareAndCheckTarget(MigrationJobPreparer.java:145)
+        at org.apache.shardingsphere.data.pipeline.scenario.migration.preparer.MigrationJobPreparer.prepareAndCheckTargetWithLock(MigrationJobPreparer.java:130)
+        at org.apache.shardingsphere.data.pipeline.scenario.migration.preparer.MigrationJobPreparer.prepare(MigrationJobPreparer.java:96)
+        at org.apache.shardingsphere.data.pipeline.scenario.migration.MigrationJobExecutorCallback.prepare(MigrationJobExecutorCallback.java:104)
+        at org.apache.shardingsphere.data.pipeline.scenario.migration.MigrationJobExecutorCallback.prepare(MigrationJobExecutorCallback.java:55)
+        at org.apache.shardingsphere.data.pipeline.core.job.executor.DistributedPipelineJobExecutor.prepare(DistributedPipelineJobExecutor.java:125)
+        at org.apache.shardingsphere.data.pipeline.core.job.executor.DistributedPipelineJobExecutor.execute(DistributedPipelineJobExecutor.java:108)
         at org.apache.shardingsphere.data.pipeline.core.job.executor.DistributedPipelineJobExecutor.execute(DistributedPipelineJobExecutor.java:80)
         at org.apache.shardingsphere.data.pipeline.scenario.migration.MigrationJob.execute(MigrationJob.java:43)
         at org.apache.shardingsphere.elasticjob.simple.executor.SimpleJobExecutor.process(SimpleJobExecutor.java:33)
@@ -54,24 +220,89 @@ Caused by: java.lang.NullPointerException
         at org.apache.shardingsphere.elasticjob.lite.internal.schedule.LiteJob.execute(LiteJob.java:35)
         at org.quartz.core.JobRunShell.run(JobRunShell.java:202)
         at org.quartz.simpl.SimpleThreadPool$WorkerThread.run(SimpleThreadPool.java:573)
-Caused by: java.util.concurrent.ExecutionException: java.lang.NullPointerException
-        at java.base/java.util.concurrent.CompletableFuture.wrapInExecutionException(CompletableFuture.java:345)
-        at java.base/java.util.concurrent.CompletableFuture.reportGet(CompletableFuture.java:440)
-        at java.base/java.util.concurrent.CompletableFuture.get(CompletableFuture.java:2094)
-        at org.apache.shardingsphere.data.pipeline.core.execute.PipelineExecuteEngine.trigger(PipelineExecuteEngine.java:133)
-        ... 14 more
-Caused by: java.lang.NullPointerException
-        at java.base/java.util.Objects.requireNonNull(Objects.java:220)
-        at java.base/java.util.Optional.of(Optional.java:113)
-        at org.apache.shardingsphere.data.pipeline.core.importer.ImporterConfiguration.findSchemaName(ImporterConfiguration.java:80)
-        at org.apache.shardingsphere.data.pipeline.core.importer.sink.type.PipelineDataSourceSink.executeBatchInsert(PipelineDataSourceSink.java:130)
-        at org.apache.shardingsphere.data.pipeline.core.importer.sink.type.PipelineDataSourceSink.doWrite(PipelineDataSourceSink.java:113)
-        at org.apache.shardingsphere.data.pipeline.core.importer.sink.type.PipelineDataSourceSink.batchWrite(PipelineDataSourceSink.java:97)
-        at org.apache.shardingsphere.data.pipeline.core.importer.sink.type.PipelineDataSourceSink.write(PipelineDataSourceSink.java:83)
-        at org.apache.shardingsphere.data.pipeline.core.importer.SingleChannelConsumerImporter.runBlocking(SingleChannelConsumerImporter.java:55)
-        at org.apache.shardingsphere.data.pipeline.core.execute.AbstractPipelineLifecycleRunnable.start(AbstractPipelineLifecycleRunnable.java:50)
-        at org.apache.shardingsphere.data.pipeline.core.execute.AbstractPipelineLifecycleRunnable.run(AbstractPipelineLifecycleRunnable.java:81)
-        at java.base/java.util.concurrent.CompletableFuture$AsyncRun.run(CompletableFuture.java:1825)
-        at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1090)
-        at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:614)
-        at java.base/java.lang.Thread.run(Thread.java:1474)
+
+
+org.apache.shardingsphere.infra.exception.dialect.exception.syntax.sql.DialectSQLParsingException: You have an error in your SQL syntax: CREATE TABLE IF NOT EXISTS public.users
+(
+id integer NOT NULL DEFAULT nextval('users_id_seq'::regclass)
+,
+name character varying(100) COLLATE pg_catalog."default" NOT NULL
+,
+email character varying(255) COLLATE pg_catalog."default" NOT NULL
+,
+status smallint DEFAULT 1
+,
+registered_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP
+,
+CONSTRAINT users_pkey PRIMARY KEY (
+id)
+
+
+
+,
+
+CONSTRAINT users_email_key UNIQUE (
+email)
+
+
+
+)
+WITH (
+OIDS = FALSE)
+TABLESPACE pg_default, null
+        at org.apache.shardingsphere.infra.parser.ShardingSphereSQLParserEngine.getException(ShardingSphereSQLParserEngine.java:66)
+        at org.apache.shardingsphere.infra.parser.ShardingSphereSQLParserEngine.parse(ShardingSphereSQLParserEngine.java:59)
+        at org.apache.shardingsphere.data.pipeline.core.metadata.generator.PipelineDDLDecorator.parseSQL(PipelineDDLDecorator.java:105)
+        at org.apache.shardingsphere.data.pipeline.core.metadata.generator.PipelineDDLDecorator.decorateActualSQL(PipelineDDLDecorator.java:84)
+        at org.apache.shardingsphere.data.pipeline.core.metadata.generator.PipelineDDLDecorator.decorate(PipelineDDLDecorator.java:75)
+        at org.apache.shardingsphere.data.pipeline.core.preparer.datasource.PipelineJobDataSourcePreparer.decorateTargetTableSQL(PipelineJobDataSourcePreparer.java:145)
+        at org.apache.shardingsphere.data.pipeline.core.preparer.datasource.PipelineJobDataSourcePreparer.prepareTargetTables(PipelineJobDataSourcePreparer.java:122)
+        at org.apache.shardingsphere.data.pipeline.scenario.migration.preparer.MigrationJobPreparer.prepareTarget(MigrationJobPreparer.java:162)
+        at org.apache.shardingsphere.data.pipeline.scenario.migration.preparer.MigrationJobPreparer.prepareAndCheckTarget(MigrationJobPreparer.java:145)
+        at org.apache.shardingsphere.data.pipeline.scenario.migration.preparer.MigrationJobPreparer.prepareAndCheckTargetWithLock(MigrationJobPreparer.java:130)
+        at org.apache.shardingsphere.data.pipeline.scenario.migration.preparer.MigrationJobPreparer.prepare(MigrationJobPreparer.java:96)
+        at org.apache.shardingsphere.data.pipeline.scenario.migration.MigrationJobExecutorCallback.prepare(MigrationJobExecutorCallback.java:104)
+        at org.apache.shardingsphere.data.pipeline.scenario.migration.MigrationJobExecutorCallback.prepare(MigrationJobExecutorCallback.java:55)
+        at org.apache.shardingsphere.data.pipeline.core.job.executor.DistributedPipelineJobExecutor.prepare(DistributedPipelineJobExecutor.java:125)
+        at org.apache.shardingsphere.data.pipeline.core.job.executor.DistributedPipelineJobExecutor.execute(DistributedPipelineJobExecutor.java:108)
+        at org.apache.shardingsphere.data.pipeline.core.job.executor.DistributedPipelineJobExecutor.execute(DistributedPipelineJobExecutor.java:80)
+        at org.apache.shardingsphere.data.pipeline.scenario.migration.MigrationJob.execute(MigrationJob.java:43)
+        at org.apache.shardingsphere.elasticjob.simple.executor.SimpleJobExecutor.process(SimpleJobExecutor.java:33)
+        at org.apache.shardingsphere.elasticjob.simple.executor.SimpleJobExecutor.process(SimpleJobExecutor.java:29)
+        at org.apache.shardingsphere.elasticjob.executor.ElasticJobExecutor.process(ElasticJobExecutor.java:173)
+        at org.apache.shardingsphere.elasticjob.executor.ElasticJobExecutor.process(ElasticJobExecutor.java:142)
+        at org.apache.shardingsphere.elasticjob.executor.ElasticJobExecutor.execute(ElasticJobExecutor.java:124)
+        at org.apache.shardingsphere.elasticjob.executor.ElasticJobExecutor.execute(ElasticJobExecutor.java:100)
+        at org.apache.shardingsphere.elasticjob.lite.internal.schedule.LiteJob.execute(LiteJob.java:35)
+        at org.quartz.core.JobRunShell.run(JobRunShell.java:202)
+        at org.quartz.simpl.SimpleThreadPool$WorkerThread.run(SimpleThreadPool.java:573)
+
+
+CREATE TABLE
+    IF NOT EXISTS public.users (
+        id integer NOT NULL DEFAULT nextval ('users_id_seq'::regclass),
+        name character varying(100) COLLATE pg_catalog."default" NOT NULL,
+        email character varying(255) COLLATE pg_catalog."default" NOT NULL,
+        status smallint DEFAULT 1,
+        registered_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT users_pkey PRIMARY KEY (id),
+        CONSTRAINT users_email_key UNIQUE (email)
+    )
+WITH
+    (OIDS = FALSE) TABLESPACE pg_default,
+    null;
+
+CREATE TABLE
+    IF NOT EXISTS public.orders (
+        order_id integer NOT NULL DEFAULT nextval ('orders_order_id_seq'::regclass),
+        user_id integer,
+        product_name character varying(100) COLLATE pg_catalog."default",
+        quantity integer DEFAULT 1,
+        amount numeric(10, 2),
+        order_date timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+        notes text COLLATE pg_catalog."default",
+        CONSTRAINT orders_pkey PRIMARY KEY (order_id)
+    )
+WITH
+    (OIDS = FALSE) TABLESPACE pg_default,
+    null;
