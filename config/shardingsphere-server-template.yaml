@@ -20,7 +20,16 @@ authority:
 transaction:
   defaultType: LOCAL
 
+logging:
+  loggers:
+  - loggerName: ShardingSphere-SQL
+    additivity: true
+    level: INFO
+    props:
+      enable: false
+
 props:
+  system-log-level: DEBUG
   proxy-frontend-database-protocol-type: MySQL
   
   # Show executed SQL for debugging

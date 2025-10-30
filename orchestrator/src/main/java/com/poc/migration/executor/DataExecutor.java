@@ -218,7 +218,7 @@ public class DataExecutor {
      * IMPORTANT: The database is already specified in the storage unit's JDBC URL.
      * Syntax:
      *   - MySQL: MIGRATE TABLE source_ds.table_name INTO target_ds.table_name
-     *   - PostgreSQL: MIGRATE TABLE source_ds.schema.table_name INTO target_ds.schema.table_name
+     *   - PostgreSQL: MIGRATE TABLE source_ds.schema.table_name INTO table_name
      */
     public List<String> createMigrationJobs(JobRequest request) throws Exception {
         List<String> jobIds = new ArrayList<>();
@@ -567,7 +567,7 @@ public class DataExecutor {
     private String buildJdbcUrl(JobRequest.DbConfig config) {
         if ("postgresql".equals(config.getType())) {
             // PostgreSQL URL with database
-            return String.format("jdbc:postgresql://%s:%d/%s",
+            return String.format("jdbc:postgresql://%s:%d/%s?ssl=false",
                     config.getHost(), config.getPort(), config.getDatabase());
         }
         
