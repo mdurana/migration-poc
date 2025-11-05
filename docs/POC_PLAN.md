@@ -22,10 +22,11 @@ It also validates an *automated* schema normalization step for basic heterogeneo
 The POC consists of 6 containerized services managed by `docker-compose.yml`, plus one local script:
 
 1.  **`orchestrator`**: A Spring Boot application (Maven module) containing the state machine and API. It acts as the "brain" and runs all tasks. Connects to ShardingSphere-Proxy via MySQL protocol on port **3307** (container internal port).
-2.  **`source-db`**: A MySQL 8 database, initialized with schema and data. **Container port:** 3306 | **Host port:** 3306
-3.  **`target-db`**: An empty MySQL 8 database (for homogeneous tests). **Container port:** 3306 | **Host port:** 3307
-4.  **`target-db-pg`**: An empty PostgreSQL 15 database (for heterogeneous tests). **Container port:** 5432 | **Host port:** 5432
-5.  **`shardingsphere-proxy`**: The data migration engine. **Container port:** 3307 (MySQL protocol) | **Host port:** 3309. Requires ZooKeeper client libraries in `ext-lib/` directory.
+2.  **`mysql-source-db`**: A MySQL 8 database, initialized with schema and data. **Container port:** 3306 | **Host port:** 3306
+3.  **`mysql-target-db`**: An empty MySQL 8 database (for homogeneous tests). **Container port:** 3306 | **Host port:** 3307
+4.  **`pg-source-db`**: An empty PostgreSQL 11 database (for heterogeneous tests). **Container port:** 5432 | **Host port:** 5432
+4.  **`pg-target-db`**: An empty PostgreSQL 16 database (for heterogeneous tests). **Container port:** 5432 | **Host port:** 5432
+5.  **`shardingsphere-proxy`**: The data migration engine. **Container port:** 3307 (MySQL/PostgreSQL protocol) | **Host port:** 3309. Requires ZooKeeper client libraries in `ext-lib/` directory.
 6.  **`zookeeper`**: The metadata store required by ShardingSphere for migration job state in Cluster mode. **Port:** 2181
 7.  **`scripts/populate-data.py`**: A local Python script used to generate and load a large (6,000+ row) test dataset into the `source-db` *after* it starts.
 

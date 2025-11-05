@@ -121,12 +121,12 @@ INFO [Job-1] [STATE] VALIDATING -> DONE
 INFO [Job-1] Lifecycle COMPLETE.
 ```
 
-### Step 5: Test CDC (While DATA\_RUNNING)
+### Step 5: Test CDC (While DATA_RUNNING)
 
-While the logs show the job is in the `DATA_RUNNING` state, open a **new terminal** and connect to the `source-db`:
+While the logs show the job is in the `DATA_RUNNING` state, open a **new terminal** and connect to the `mysql-source-db`:
 
 ```bash
-docker-compose exec source-db mysql -u root -psource_password sourcedb
+docker-compose exec mysql-source-db mysql -u root -proot mysql_db
 ```
 
 Once inside the MySQL prompt, insert a new row:
@@ -162,7 +162,7 @@ Connect to your **target database** to confirm all data was migrated.
 
 ```bash
 # For a HETEROGENEOUS (PostgreSQL) target:
-docker-compose exec target-db-pg psql -U postgres -d targetdb_pg
+docker-compose exec pg-target-db psql -U postgres -d pg_db
 ```
 
 Run queries to check the data (using PostgreSQL syntax if applicable):
