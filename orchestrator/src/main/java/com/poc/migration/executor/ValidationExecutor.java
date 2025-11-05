@@ -188,7 +188,7 @@ public class ValidationExecutor {
     private String buildJdbcUrl(JobRequest.DbConfig config) {
         if ("postgresql".equals(config.getType())) {
             // PostgreSQL-specific URL (no useSSL parameter)
-            return String.format("jdbc:postgresql://%s:%d/%s",
+            return String.format("jdbc:postgresql://%s:%d/%s?ssl=false",
                     config.getHost(), config.getPort(), config.getDatabase());
         } else if ("mysql".equals(config.getType())) {
             // MySQL-specific URL with common parameters

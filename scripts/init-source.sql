@@ -1,5 +1,5 @@
 -- Set the database to use
-USE sourcedb;
+USE mysql_db;
 
 -- Drop tables in reverse order of dependency to avoid foreign key errors
 DROP TABLE IF EXISTS orders;

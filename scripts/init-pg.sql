@@ -1,5 +1,5 @@
 -- This script is for PostgreSQL.
--- The 'USE sourcedb;' command is not needed. In the Docker context,
+-- The 'USE mysql_db;' command is not needed. In the Docker context,
 -- this script runs automatically against the database specified by POSTGRES_DB.
 
 -- Drop tables in reverse order of dependency to avoid foreign key errors
@@ -24,6 +24,10 @@ CREATE TABLE users (
 
 -- Comments are added separately in PostgreSQL
 COMMENT ON COLUMN users.status IS '1=Active, 0=Inactive, 2=Pending';
+
+-- Adding a composite unique index on (id, email)
+ALTER TABLE public.users
+ADD CONSTRAINT users_id_email_unique_idx UNIQUE (id, email);
 
 --
 -- Create orders table

@@ -1,0 +1,50 @@
+server:
+  port: 8080
+
+# Spring JPA / Metadata DB (SQLite)
+# We get the path from an environment variable set in docker-compose.yml
+spring:
+  datasource:
+    url: jdbc:sqlite:${SQLITE_DB_PATH:./orchestrator.db}
+    driver-class-name: org.sqlite.JDBC
+  jpa:
+    hibernate:
+      ddl-auto: update # Automatically create/update metadata tables
+    database-platform: org.hibernate.community.dialect.SQLiteDialect
+
+  # Disable Spring Boot's automatic Liquibase execution on startup.
+  # We want to control Liquibase manually via our SchemaExecutor.
+  liquibase:
+    enabled: false
+
+# ShardingSphere Proxy Admin Connection
+shardingsphere:
+  admin:
+    host: shardingsphere-proxy
+    port: 3307
+    database: shardingsphere # ShardingSphere-Proxy logical database for migrations
+    migration-db: migration_db # Logical database for migration tasks
+    # These creds are set in the shardingsphere-server-template.yaml
+    user: root
+    password: root
+
+# Path for externalized schema files
+migration:
+  schema:
+    output-dir: /app/generated-schema/ # This matches the container path from docker-compose
+
+# Enable async for the state machine
+spring.task.execution:
+  pool:
+    core-size: 2
+    max-size: 10
+
+# For monitoring health
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: always

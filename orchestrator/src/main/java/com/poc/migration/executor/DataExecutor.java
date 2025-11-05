@@ -34,7 +34,7 @@ public class DataExecutor {
     @Value("${shardingsphere.admin.password}")
     private String adminPassword;
 
-    @Value("${shardingsphere.admin.database:shardingsphere}")
+    @Value("${shardingsphere.admin.database}")
     private String adminDatabase;
 
     @Value("${shardingsphere.admin.migration-db:migration_db}")
@@ -50,14 +50,16 @@ public class DataExecutor {
             log.info("Ensuring logical migration database exists: {}", migrationDatabase);
             
             // Step 1: Check if database already exists
-            boolean databaseExists = checkDatabaseExists();
+            boolean databaseExists = false; // checkDatabaseExists();
             
             if (databaseExists) {
                 log.info("✓ Migration database '{}' already exists", migrationDatabase);
             } else {
                 // Step 2: Create the database using admin database context
                 log.info("Creating migration database: {}", migrationDatabase);
-                String createDbSQL = String.format("CREATE DATABASE IF NOT EXISTS %s", migrationDatabase);
+
+                // TODO refactor to be compatible with multiple DB types
+                String createDbSQL = String.format("CREATE DATABASE %s", migrationDatabase);
                 executeSQL(createDbSQL, adminDatabase);
                 log.info("✓ Database creation command executed");
                 
@@ -125,9 +127,28 @@ public class DataExecutor {
      * Use container port 3307, not host port!
      */
     private Connection getAdminConnection(String db) throws Exception {
+        if ("postgres".equalsIgnoreCase(adminDatabase)) {
+            log.debug("getAdminConnection: Using PostgreSQL protocol");
+            return getPostgresAdminConnection(db);
+        }
+        // Default to MySQL
+        log.debug("getAdminConnection: Using MySQL protocol");
+        return getMySQLAdminConnection(db);
+    }
+
+    private Connection getMySQLAdminConnection(String db) throws Exception {
         // For Docker: use container name and container port
         String jdbcUrl = String.format("jdbc:mysql://%s:%d/%s", adminHost, adminPort, db);
         Class.forName("com.mysql.cj.jdbc.Driver");
+        log.debug("Connecting to proxy at: {}", jdbcUrl);
+        return DriverManager.getConnection(jdbcUrl, adminUser, adminPassword);
+    }
+
+    private Connection getPostgresAdminConnection(String db) throws Exception {
+        // For Docker: use container name and container port
+        String jdbcUrl = String.format("jdbc:postgresql://%s:%d/%s", adminHost, adminPort, db);
+        // Optional with JDBC 4+, but harmless to keep for explicitness
+        // Class.forName("org.postgresql.Driver");
         log.debug("Connecting to proxy at: {}", jdbcUrl);
         return DriverManager.getConnection(jdbcUrl, adminUser, adminPassword);
     }
@@ -227,27 +248,6 @@ public class DataExecutor {
         log.info("Creating migration jobs for {} tables", tables.size());
 
         for (String tableName : tables) {
-            // String migrateSQL;
-            
-            // // Build MIGRATE TABLE command based on database type
-            // if ("postgresql".equalsIgnoreCase(request.getTarget().getType())) {
-            //     // PostgreSQL requires schema qualification
-            //     String sourceSchema = request.getSource().getSchemaOrDefault();
-            //     String targetSchema = request.getTarget().getSchemaOrDefault();
-                
-            //     migrateSQL = String.format(
-            //         "MIGRATE TABLE source_ds.%s.%s INTO %s.%s",
-            //         sourceSchema, tableName, targetSchema, tableName
-            //     );
-            // } else {
-            //     // MySQL: storage_unit.table_name
-            //     // Database is already in the JDBC URL of the storage unit
-            //     migrateSQL = String.format(
-            //         "MIGRATE TABLE source_ds.%s INTO %s",
-            //         tableName, tableName
-            //     );
-            // }
-
             String migrateSQL = String.format(
                     "MIGRATE TABLE source_ds.%s INTO %s",
                     tableName, tableName

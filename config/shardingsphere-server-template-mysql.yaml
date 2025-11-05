@@ -31,7 +31,7 @@ logging:
 
 props:
   system-log-level: DEBUG
-  proxy-frontend-database-protocol-type: PostgreSQL
+  proxy-frontend-database-protocol-type: MySQL
   
   # Show executed SQL for debugging
   sql-show: true

@@ -306,3 +306,68 @@ CREATE TABLE
 WITH
     (OIDS = FALSE) TABLESPACE pg_default,
     null;
+
+https://github.com/apache/shardingsphere/issues/33765
+https://github.com/apache/shardingsphere/issues/26203
+
+# Migration Steps
+
+psql -U postgres
+
+# Create schema in target DB
+
+create users and orders use init-pg.sql
+
+mysql -h shardingsphere-proxy -P 3307 -u root -p
+psql -h shardingsphere-proxy -p 3307 -U root -d postgres
+
+CREATE DATABASE migration_db;
+
+\c migration_db
+
+SHOW MIGRATION SOURCE STORAGE UNITS;
+SHOW STORAGE UNITS;
+
+REGISTER MIGRATION SOURCE STORAGE UNIT source_ds (
+        URL="jdbc:postgresql://pg-source-db:5432/pg_db?ssl=false",
+        USER="postgres",
+        PASSWORD="postgres",
+       PROPERTIES("minPoolSize"="1","maxPoolSize"="20","idleTimeout"="60000")
+);
+
+REGISTER STORAGE UNIT IF NOT EXISTS target_ds (
+        URL="jdbc:postgresql://pg-target-db:5432/pg_db?ssl=false",
+        USER="postgres",
+        PASSWORD="postgres",
+        PROPERTIES("minPoolSize"="1","maxPoolSize"="20","idleTimeout"="60000")
+);
+
+SHOW MIGRATION SOURCE STORAGE UNITS;
+SHOW STORAGE UNITS;
+
+MIGRATE TABLE source_ds.users INTO users;
+MIGRATE TABLE source_ds.orders INTO orders;
+SHOW MIGRATION LIST;
+SHOW MIGRATION STATUS 'job_id_for_users';
+SHOW MIGRATION STATUS 'job_id_for_orders';
+
+CHECK MIGRATION 'job_id_for_users';
+SHOW MIGRATION CHECK STATUS 'job_id_for_orders';
+CHECK MIGRATION 'job_id_for_orders';
+SHOW MIGRATION CHECK STATUS 'job_id_for_orders';
+
+COMMIT MIGRATION 'job_id_for_users';
+COMMIT MIGRATION 'job_id_for_orders';
+
+ROLLBACK MIGRATION 'job_id_for_users';
+ROLLBACK MIGRATION 'job_id_for_orders';
+
+====================
+
+postgres=> CREATE DATABASE migration_db;
+CREATE DATABASE
+postgres=> \c migration_db
+psql (11.16 (Debian 11.16-1.pgdg90+1), server 12.3-ShardingSphere-Proxy 5.5.2)
+WARNING: psql major version 11, server major version 12.
+         Some psql features might not work.
+You are now connected to database "migration_db" as user "root".

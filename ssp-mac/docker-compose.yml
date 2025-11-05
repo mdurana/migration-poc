@@ -7,7 +7,7 @@ services:
       - "8080:8080"
     volumes:
       # Mount the config file
-      - ../config/application-poc.yaml:/app/config/application.yaml
+      - ../config/application-poc-${SSP_CONFIG}.yaml:/app/config/application.yaml
       - ../job-data:/app/job-data
       # Mount a volume for the SQLite metadata DB
       - orchestrator-data:/app/db
@@ -59,8 +59,14 @@ services:
       - MYSQL_ROOT_PASSWORD=root
       - MYSQL_DATABASE=mysql_db
     volumes:
-      - ../scripts/init-mysql.sql:/docker-entrypoint-initdb.d/init.sql
-    command: --default-authentication-plugin=mysql_native_password --binlog-row-image=FULL --gtid-mode=ON --enforce-gtid-consistency=ON --log-slave-updates=ON --server-id=1
+      - ../scripts/init-mysql.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      #- mysql_8_data:/var/lib/mysql
+    command: 
+      - --server-id=1
+      - --log-bin=mysql-bin
+      - --binlog-format=ROW
+      - --binlog-row-image=FULL
+      - --default-authentication-plugin=mysql_native_password
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot"]
       interval: 10s
@@ -79,7 +85,7 @@ services:
       - MYSQL_ROOT_PASSWORD=root
       - MYSQL_DATABASE=mysql_db
     volumes:
-      - ../scripts/init-disable-fk.sql:/docker-entrypoint-initdb.d/init.sql
+      - ../scripts/init-disable-fk.sql:/docker-entrypoint-initdb.d/init.sql:ro
     command: --default-authentication-plugin=mysql_native_password --server-id=2
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot"]
@@ -100,8 +106,16 @@ services:
       - POSTGRES_PASSWORD=postgres
       - POSTGRES_DB=pg_db
     volumes:
-      - ../scripts/init-pg.sql:/docker-entrypoint-initdb.d/init.sql
-    command: postgres -c 'wal_level=logical' # Required for CDC
+      - ../scripts/init-pg.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - ../scripts/pg-hba.sh:/docker-entrypoint-initdb.d/pg-hba.sh:ro
+      - pg_11_data:/var/lib/postgresql/data
+    command: ["postgres",
+      "-c","wal_level=logical",
+      "-c","max_wal_senders=10",
+      "-c","max_replication_slots=10",
+      "-c","wal_sender_timeout=0",
+      "-c","max_connections=600"
+      ]
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
@@ -113,14 +127,13 @@ services:
   # Target DB - PostgreSQL
   # ===================================================================
   pg-target-db:
-    image: postgres:17
+    image: postgres:16
     ports:
       - "15433:5432"
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
       - POSTGRES_DB=pg_db
-    command: postgres -c 'wal_level=logical' # Required for CDC
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
@@ -150,7 +163,7 @@ services:
       - "13307:3307" # Main proxy port (if we were proxying)
     volumes:
       - ../ext-lib:/opt/shardingsphere-proxy/ext-lib
-      - ../config/shardingsphere-server-template.yaml:/opt/shardingsphere-proxy/conf/global.yaml
+      - ../config/shardingsphere-server-template-${SSP_CONFIG}.yaml:/opt/shardingsphere-proxy/conf/global.yaml
     depends_on:
       #zookeeper:
       #  condition: service_healthy
@@ -175,6 +188,8 @@ services:
 
 volumes:
   orchestrator-data:
+  #mysql_8_data:
+  pg_11_data:
 
 ###############################################################################
 # STARTUP SEQUENCE WITH HEALTH CHECKS

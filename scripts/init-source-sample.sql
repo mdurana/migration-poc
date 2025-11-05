@@ -1,4 +1,4 @@
-USE sourcedb;
+USE mysql_db;
 
 -- 1. Main user account
 CREATE TABLE tbl_users (
