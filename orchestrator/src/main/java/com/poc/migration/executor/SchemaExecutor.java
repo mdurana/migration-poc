@@ -164,7 +164,7 @@ public class SchemaExecutor {
      */
     private String buildJdbcUrl(JobRequest.DbConfig config) {
         if ("postgresql".equals(config.getType())) {
-            return String.format("jdbc:postgresql://%s:%d/%s",
+            return String.format("jdbc:postgresql://%s:%d/%s?useSSL=false",
                 config.getHost(), config.getPort(), config.getDatabase());
         }
         

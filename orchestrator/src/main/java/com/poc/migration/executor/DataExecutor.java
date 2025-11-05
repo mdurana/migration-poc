@@ -50,6 +50,7 @@ public class DataExecutor {
             log.info("Ensuring logical migration database exists: {}", migrationDatabase);
             
             // Step 1: Check if database already exists
+            // TODO Implement actual check
             boolean databaseExists = false; // checkDatabaseExists();
             
             if (databaseExists) {
@@ -58,7 +59,7 @@ public class DataExecutor {
                 // Step 2: Create the database using admin database context
                 log.info("Creating migration database: {}", migrationDatabase);
 
-                // TODO refactor to be compatible with multiple DB types
+                // TODO Refactor to be compatible with multiple DB types
                 String createDbSQL = String.format("CREATE DATABASE %s", migrationDatabase);
                 executeSQL(createDbSQL, adminDatabase);
                 log.info("✓ Database creation command executed");
@@ -73,7 +74,7 @@ public class DataExecutor {
             
             for (int i = 0; i < retries; i++) {
                 try {
-                    try (Connection testConn = getAdminConnection(migrationDatabase)) {
+                    try (Connection _ = getAdminConnection(migrationDatabase)) {
                         log.info("✓ Successfully connected to migration database: {}", migrationDatabase);
                         connected = true;
                         break;
@@ -104,9 +105,10 @@ public class DataExecutor {
      * Checks if the migration database already exists.
      */
     private boolean checkDatabaseExists() {
+        // TODO Implement proper check for different DB types
         try (Connection conn = getAdminConnection(adminDatabase);
-             Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery("SHOW DATABASES")) {
+            Statement stmt = conn.createStatement();
+            ResultSet rs = stmt.executeQuery("SHOW DATABASES")) {
             
             while (rs.next()) {
                 String dbName = rs.getString(1);
@@ -146,7 +148,7 @@ public class DataExecutor {
 
     private Connection getPostgresAdminConnection(String db) throws Exception {
         // For Docker: use container name and container port
-        String jdbcUrl = String.format("jdbc:postgresql://%s:%d/%s", adminHost, adminPort, db);
+        String jdbcUrl = String.format("jdbc:postgresql://%s:%d/%s?useSSL=false", adminHost, adminPort, db);
         // Optional with JDBC 4+, but harmless to keep for explicitness
         // Class.forName("org.postgresql.Driver");
         log.debug("Connecting to proxy at: {}", jdbcUrl);
@@ -158,8 +160,8 @@ public class DataExecutor {
         String sql = String.format("SHOW MIGRATION SOURCE STORAGE UNITS");
         
         try (Connection conn = getAdminConnection(migrationDatabase);
-             Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery(sql)) {
+            Statement stmt = conn.createStatement();
+            ResultSet rs = stmt.executeQuery(sql)) {
             
             log.info("Checking registered migration source storage units...");
             
@@ -279,8 +281,8 @@ public class DataExecutor {
         List<String> actualJobIds = new ArrayList<>();
         
         try (Connection conn = getAdminConnection(migrationDatabase);
-             Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery("SHOW MIGRATION LIST")) {
+            Statement stmt = conn.createStatement();
+            ResultSet rs = stmt.executeQuery("SHOW MIGRATION LIST")) {
             
             while (rs.next()) {
                 String jobId = rs.getString("id");
@@ -304,8 +306,8 @@ public class DataExecutor {
         log.info("Checking migration job status...");
         
         try (Connection conn = getAdminConnection(migrationDatabase);
-             Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery("SHOW MIGRATION LIST")) {
+            Statement stmt = conn.createStatement();
+            ResultSet rs = stmt.executeQuery("SHOW MIGRATION LIST")) {
             
             log.info("Active migration jobs:");
             boolean hasJobs = false;
@@ -389,7 +391,7 @@ public class DataExecutor {
                     }
                 }
             }
-            // TODO : Improve ready check logic
+            // TODO Improve ready check logic
             allReady = (readyCount == totalJobs);
 
             if (allReady) {
@@ -418,8 +420,8 @@ public class DataExecutor {
         String statusSQL = String.format("SHOW MIGRATION STATUS '%s'", jobId);
         
         try (Connection conn = getAdminConnection(migrationDatabase);
-             Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery(statusSQL)) {
+            Statement stmt = conn.createStatement();
+            ResultSet rs = stmt.executeQuery(statusSQL)) {
             
             log.info("Migration status for job {}:", jobId);
             
@@ -483,8 +485,8 @@ public class DataExecutor {
         log.info("Verifying source storage unit registration...");
         
         try (Connection conn = getAdminConnection(migrationDatabase);
-             Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery("SHOW MIGRATION SOURCE STORAGE UNITS")) {
+            Statement stmt = conn.createStatement();
+            ResultSet rs = stmt.executeQuery("SHOW MIGRATION SOURCE STORAGE UNITS")) {
             
             log.info("Registered storage units:");
             boolean hasSource = false;
@@ -509,8 +511,8 @@ public class DataExecutor {
         }
 
         try (Connection conn = getAdminConnection(migrationDatabase);
-             Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery("SHOW STORAGE UNITS")) {
+            Statement stmt = conn.createStatement();
+            ResultSet rs = stmt.executeQuery("SHOW STORAGE UNITS")) {
             
             log.info("Registered target storage units:");
             boolean hasTarget = false;
@@ -544,7 +546,7 @@ public class DataExecutor {
         log.debug("Executing DistSQL on database '{}': {}", db, preview);
         
         try (Connection conn = getAdminConnection(db);
-             Statement stmt = conn.createStatement()) {
+            Statement stmt = conn.createStatement()) {
             
             stmt.execute(sql);
             log.debug("✓ DistSQL executed successfully on database '{}'", db);
@@ -558,7 +560,7 @@ public class DataExecutor {
 
     private void executeMigrationSQL(String sql) throws Exception {
         // Log first 200 chars for debugging
-       executeSQL(sql, migrationDatabase);
+        executeSQL(sql, migrationDatabase);
     }
 
     /**

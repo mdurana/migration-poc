@@ -36,9 +36,9 @@ public interface JobRepository extends JpaRepository<Job, Long> {
      * Find running jobs (not terminal states).
      */
     @Query("SELECT j FROM Job j WHERE j.status NOT IN " +
-           "('DONE', 'SCHEMA_GENERATE_FAILED', 'SCHEMA_NORMALIZE_FAILED', " +
-           "'SCHEMA_FAILED', 'DATA_CONFIG_FAILED', 'DATA_FAILED', " +
-           "'VALIDATION_FAILED', 'COMMIT_FAILED')")
+        "('DONE', 'SCHEMA_GENERATE_FAILED', 'SCHEMA_NORMALIZE_FAILED', " +
+        "'SCHEMA_FAILED', 'DATA_CONFIG_FAILED', 'DATA_FAILED', " +
+        "'VALIDATION_FAILED', 'COMMIT_FAILED')")
     List<Job> findRunningJobs();
     
     /**

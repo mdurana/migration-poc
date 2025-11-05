@@ -133,7 +133,7 @@ public class ValidationExecutor {
         log.debug("Executing: {}", sql);
         
         try (Connection conn = DriverManager.getConnection(jdbcUrl, user, password);
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            PreparedStatement stmt = conn.prepareStatement(sql)) {
             
             // Set query timeout to prevent hanging
             stmt.setQueryTimeout(30); // 30 seconds
