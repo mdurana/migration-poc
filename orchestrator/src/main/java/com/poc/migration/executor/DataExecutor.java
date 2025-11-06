@@ -202,10 +202,7 @@ public class DataExecutor {
                     URL="%s",
                     USER="%s",
                     PASSWORD="%s",
-                    PROPERTIES(
-                        "maximumPoolSize"=10,
-                        "idleTimeout"=30000
-                    )
+                    PROPERTIES("minPoolSize"="1","maxPoolSize"="20","idleTimeout"="60000")
                 )
                 """, sourceUrl, request.getSource().getUser(), request.getSource().getPassword());
             
@@ -220,10 +217,7 @@ public class DataExecutor {
                 URL="%s",
                 USER="%s",
                 PASSWORD="%s",
-                PROPERTIES(
-                    "maximumPoolSize"=10,
-                    "idleTimeout"=30000
-                )
+                PROPERTIES("minPoolSize"="1","maxPoolSize"="20","idleTimeout"="60000")
             )
             """, targetUrl, request.getTarget().getUser(), request.getTarget().getPassword());
         
