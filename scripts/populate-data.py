@@ -7,8 +7,8 @@ DB_CONFIG = {
     'host': 'localhost',
     'port': 3306,
     'user': 'root',
-    'password': 'source_password',
-    'database': 'sourcedb'
+    'password': 'root',
+    'database': 'mysql_db'
 }
 NUM_USERS = 250000
 NUM_ORDERS = 500000

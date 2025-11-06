@@ -1,5 +1,9 @@
 package com.poc.migration.executor;
 
+import com.poc.migration.exception.SchemaException;
+import com.poc.migration.infrastructure.database.DatabaseConnectionConfig;
+import com.poc.migration.infrastructure.database.DatabaseConnectionFactory;
+import com.poc.migration.infrastructure.database.DatabaseType;
 import com.poc.migration.model.JobRequest;
 
 import liquibase.Liquibase;
@@ -7,6 +11,7 @@ import liquibase.database.Database;
 import liquibase.database.DatabaseFactory;
 import liquibase.database.jvm.JdbcConnection;
 import liquibase.resource.DirectoryResourceAccessor;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.w3c.dom.Document;
@@ -24,20 +29,28 @@ import javax.xml.transform.stream.StreamResult;
 import java.io.File;
 import java.nio.file.Paths;
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.util.Map;
 
+/**
+ * Service for schema generation, normalization, and application using Liquibase.
+ * Refactored to use DatabaseConnectionFactory for connection management.
+ */
 @Service
 @Slf4j
+@RequiredArgsConstructor
 public class SchemaExecutor {
+    
+    private final DatabaseConnectionFactory connectionFactory;
 
     /**
      * Generates changelog using Liquibase's command-line equivalent approach.
      * Most reliable method for full schema capture.
      */
-    public void generateChangelog(JobRequest request, String changelogPath) throws Exception {
+    public void generateChangelog(JobRequest request, String changelogPath) {
         JobRequest.DbConfig source = request.getSource();
-        String jdbcUrl = buildJdbcUrl(source);
+        DatabaseConnectionConfig config = convertToConnectionConfig(source);
+        String jdbcUrl = connectionFactory.buildJdbcUrl(config);
+        
         log.info("Generating Liquibase changelog from source: {}", jdbcUrl);
     
         // Ensure output directory exists
@@ -62,7 +75,7 @@ public class SchemaExecutor {
     
         } catch (Exception e) {
             log.error("Failed to generate changelog: {}", e.getMessage(), e);
-            throw e;
+            throw new SchemaException("Failed to generate changelog", e);
         }
     }
 
@@ -70,77 +83,84 @@ public class SchemaExecutor {
      * Parses the generated XML changelog and auto-translates common types.
      * This is a "best-effort" translation for the POC.
      */
-    public void normalizeChangelog(JobRequest request, String inputPath, String outputPath) throws Exception {
-        Map<String, String> typeMappings = request.getDataTypeMappings();
-        String sourceType = request.getSource().getType();
-        String targetType = request.getTarget().getType();
+    public void normalizeChangelog(JobRequest request, String inputPath, String outputPath) {
+        try {
+            Map<String, String> typeMappings = request.getDataTypeMappings();
+            String sourceType = request.getSource().getType();
+            String targetType = request.getTarget().getType();
 
-        // 1. Load the XML Document
-        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-        DocumentBuilder builder = factory.newDocumentBuilder();
-        Document doc = builder.parse(new File(inputPath));
+            // 1. Load the XML Document
+            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+            DocumentBuilder builder = factory.newDocumentBuilder();
+            Document doc = builder.parse(new File(inputPath));
 
-        // 2. Find all <column> nodes
-        NodeList columnNodes = doc.getElementsByTagName("column");
-        for (int i = 0; i < columnNodes.getLength(); i++) {
-            Node node = columnNodes.item(i);
-            if (node.getNodeType() == Node.ELEMENT_NODE) {
-                Element column = (Element) node;
-                
-                // 3. Handle Auto-Increment
-                if ("postgresql".equals(targetType) && "true".equalsIgnoreCase(column.getAttribute("autoIncrement"))) {
-                    column.removeAttribute("autoIncrement");
-                    column.setAttribute("type", "SERIAL");
-                    log.debug("Normalized autoIncrement to SERIAL for column: {}", column.getAttribute("name"));
-                    continue;
-                }
-
-                // 4. Handle Data Type Mappings
-                if (column.hasAttribute("type") && typeMappings != null) {
-                    String originalType = column.getAttribute("type").toUpperCase();
-                    String baseType = originalType.split("\\(")[0];
-                    String mappingKey = sourceType + "." + baseType;
+            // 2. Find all <column> nodes
+            NodeList columnNodes = doc.getElementsByTagName("column");
+            for (int i = 0; i < columnNodes.getLength(); i++) {
+                Node node = columnNodes.item(i);
+                if (node.getNodeType() == Node.ELEMENT_NODE) {
+                    Element column = (Element) node;
                     
-                    if (typeMappings.containsKey(mappingKey)) {
-                        String newType = typeMappings.get(mappingKey);
-                        log.debug("Normalizing type: {} -> {}", mappingKey, newType);
+                    // 3. Handle Auto-Increment
+                    if ("postgresql".equals(targetType) && "true".equalsIgnoreCase(column.getAttribute("autoIncrement"))) {
+                        column.removeAttribute("autoIncrement");
+                        column.setAttribute("type", "SERIAL");
+                        log.debug("Normalized autoIncrement to SERIAL for column: {}", column.getAttribute("name"));
+                        continue;
+                    }
+
+                    // 4. Handle Data Type Mappings
+                    if (column.hasAttribute("type") && typeMappings != null) {
+                        String originalType = column.getAttribute("type").toUpperCase();
+                        String baseType = originalType.split("\\(")[0];
+                        String mappingKey = sourceType + "." + baseType;
                         
-                        // Preserve parameters if present
-                        if (originalType.contains("(")) {
-                            String params = originalType.substring(originalType.indexOf("("));
-                            column.setAttribute("type", newType + params);
-                        } else {
+                        if (typeMappings.containsKey(mappingKey)) {
+                            String newType = typeMappings.get(mappingKey);
+                            log.debug("Normalizing type: {} -> {}", mappingKey, newType);
+                            
+                            // Preserve parameters if present
+                            if (originalType.contains("(")) {
+                                String params = originalType.substring(originalType.indexOf("("));
+                                column.setAttribute("type", newType + params);
+                            } else {
+                                column.setAttribute("type", newType);
+                            }
+                        } else if (typeMappings.containsKey(sourceType + "." + originalType)) {
+                            String newType = typeMappings.get(sourceType + "." + originalType);
+                            log.debug("Normalizing type: {} -> {}", sourceType + "." + originalType, newType);
                             column.setAttribute("type", newType);
                         }
-                    } else if (typeMappings.containsKey(sourceType + "." + originalType)) {
-                        String newType = typeMappings.get(sourceType + "." + originalType);
-                        log.debug("Normalizing type: {} -> {}", sourceType + "." + originalType, newType);
-                        column.setAttribute("type", newType);
                     }
                 }
             }
-        }
 
-        // 5. Write the modified XML to output file
-        TransformerFactory transformerFactory = TransformerFactory.newInstance();
-        Transformer transformer = transformerFactory.newTransformer();
-        DOMSource domSource = new DOMSource(doc);
-        StreamResult streamResult = new StreamResult(new File(outputPath));
-        transformer.transform(domSource, streamResult);
-        
-        log.info("Normalization complete. Normalized changelog saved to {}", outputPath);
+            // 5. Write the modified XML to output file
+            TransformerFactory transformerFactory = TransformerFactory.newInstance();
+            Transformer transformer = transformerFactory.newTransformer();
+            DOMSource domSource = new DOMSource(doc);
+            StreamResult streamResult = new StreamResult(new File(outputPath));
+            transformer.transform(domSource, streamResult);
+            
+            log.info("Normalization complete. Normalized changelog saved to {}", outputPath);
+            
+        } catch (Exception e) {
+            log.error("Failed to normalize changelog: {}", e.getMessage(), e);
+            throw new SchemaException("Failed to normalize changelog", e);
+        }
     }
 
     /**
      * Connects to the TARGET database and applies the specified changelog file.
      * This creates the schema on the target.
      */
-    public void applyChangelog(JobRequest request, String changelogPath) throws Exception {
+    public void applyChangelog(JobRequest request, String changelogPath) {
         JobRequest.DbConfig target = request.getTarget();
-        String jdbcUrl = buildJdbcUrl(target);
-        log.info("Applying Liquibase changelog to target: {}", jdbcUrl);
+        DatabaseConnectionConfig config = convertToConnectionConfig(target);
+        
+        log.info("Applying Liquibase changelog to target: {}", target.getHost());
 
-        try (Connection connection = DriverManager.getConnection(jdbcUrl, target.getUser(), target.getPassword())) {
+        try (Connection connection = connectionFactory.createConnection(config)) {
             
             Database database = DatabaseFactory.getInstance()
                     .findCorrectDatabaseImplementation(new JdbcConnection(connection));
@@ -156,21 +176,22 @@ public class SchemaExecutor {
 
         } catch (Exception e) {
             log.error("Failed to apply changelog to target: {}", e.getMessage(), e);
-            throw e;
+            throw new SchemaException("Failed to apply changelog to target", e);
         }
     }
-
+    
     /**
-     * Helper to build the JDBC URL with proper settings for each database type.
+     * Convert JobRequest.DbConfig to DatabaseConnectionConfig.
      */
-    private String buildJdbcUrl(JobRequest.DbConfig config) {
-        if ("postgresql".equals(config.getType())) {
-            return String.format("jdbc:postgresql://%s:%d/%s?useSSL=false",
-                config.getHost(), config.getPort(), config.getDatabase());
-        }
-        
-        // Default to MySQL
-        return String.format("jdbc:%s://%s:%d/%s?useSSL=false&allowPublicKeyRetrieval=true",
-                config.getType(), config.getHost(), config.getPort(), config.getDatabase());
+    private DatabaseConnectionConfig convertToConnectionConfig(JobRequest.DbConfig dbConfig) {
+        return DatabaseConnectionConfig.builder()
+            .type(DatabaseType.fromString(dbConfig.getType()))
+            .host(dbConfig.getHost())
+            .port(dbConfig.getPort())
+            .database(dbConfig.getDatabase())
+            .schema(dbConfig.getSchema())
+            .user(dbConfig.getUser())
+            .password(dbConfig.getPassword())
+            .build();
     }
 }

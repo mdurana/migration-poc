@@ -6,7 +6,8 @@
     "port": 3306,
     "database": "mysql_db",
     "user": "root",
-    "password": "root"
+    "password": "root",
+    "storageUnitName": "source_ds"
   },
   "target": {
     "type": "mysql",
@@ -14,7 +15,8 @@
     "port": 3306,
     "database": "mysql_db",
     "user": "root",
-    "password": "root"
+    "password": "root",
+    "storageUnitName": "target_ds"
   },
   "tablesToMigrate": ["users", "orders"]
 }

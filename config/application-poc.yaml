@@ -24,6 +24,7 @@ shardingsphere:
     port: 3307
     database: shardingsphere # ShardingSphere-Proxy logical database for migrations
     migration-db: migration_db # Logical database for migration tasks
+    type: mysql # Database protocol type: mysql or postgresql (defaults to mysql)
     # These creds are set in the shardingsphere-server-template.yaml
     user: root
     password: root

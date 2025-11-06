@@ -82,6 +82,12 @@ public class JobRequest {
         private String schema;
         
         /**
+         * Storage unit name for ShardingSphere registration.
+         * Optional - defaults to "source_ds" for source and "target_ds" for target.
+         */
+        private String storageUnitName;
+        
+        /**
          * Helper to get the schema name with a default.
          */
         public String getSchemaOrDefault() {
@@ -91,6 +97,16 @@ public class JobRequest {
             // Return default schema based on database type
             return "postgresql".equalsIgnoreCase(type) ? "public" : database;
             //return database;
+        }
+        
+        /**
+         * Helper to get the storage unit name with a default.
+         */
+        public String getStorageUnitNameOrDefault(String defaultName) {
+            if (storageUnitName != null && !storageUnitName.isEmpty()) {
+                return storageUnitName;
+            }
+            return defaultName;
         }
     }
 }

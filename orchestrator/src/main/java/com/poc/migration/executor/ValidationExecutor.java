@@ -1,22 +1,34 @@
 package com.poc.migration.executor;
 
+import com.poc.migration.config.MigrationProperties;
+import com.poc.migration.exception.ValidationException;
+import com.poc.migration.infrastructure.database.DatabaseConnectionConfig;
+import com.poc.migration.infrastructure.database.DatabaseConnectionFactory;
+import com.poc.migration.infrastructure.database.DatabaseType;
 import com.poc.migration.model.JobRequest;
+import com.poc.migration.util.SqlValidator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * Service for validating migration results.
+ * Refactored to use DatabaseConnectionFactory and SqlValidator.
+ */
 @Service
 @Slf4j
 @RequiredArgsConstructor
 public class ValidationExecutor {
+    
+    private final DatabaseConnectionFactory connectionFactory;
+    private final MigrationProperties properties;
 
     /**
      * Validates that row counts match between source and target for all tables.
@@ -32,12 +44,12 @@ public class ValidationExecutor {
         JobRequest.DbConfig source = request.getSource();
         JobRequest.DbConfig target = request.getTarget();
 
-        // Build JDBC URLs with proper parameters for each database type
-        String sourceJdbc = buildJdbcUrl(source);
-        String targetJdbc = buildJdbcUrl(target);
+        // Build connection configs
+        DatabaseConnectionConfig sourceConfig = convertToConnectionConfig(source);
+        DatabaseConnectionConfig targetConfig = convertToConnectionConfig(target);
         
-        log.info("Source: {} ({})", sourceJdbc, source.getType());
-        log.info("Target: {} ({})", targetJdbc, target.getType());
+        log.info("Source: {}:{}/{} ({})", source.getHost(), source.getPort(), source.getDatabase(), source.getType());
+        log.info("Target: {}:{}/{} ({})", target.getHost(), target.getPort(), target.getDatabase(), target.getType());
 
         // Store results for summary
         Map<String, ValidationResult> results = new HashMap<>();
@@ -47,23 +59,8 @@ public class ValidationExecutor {
                 log.info("Validating table: {}", table);
                 
                 // Get counts from both databases
-                long sourceCount = getRowCount(
-                    sourceJdbc, 
-                    source.getUser(), 
-                    source.getPassword(), 
-                    source.getDatabase(),
-                    table,
-                    source.getType()
-                );
-                
-                long targetCount = getRowCount(
-                    targetJdbc, 
-                    target.getUser(), 
-                    target.getPassword(), 
-                    target.getDatabase(),
-                    table,
-                    target.getType()
-                );
+                long sourceCount = getRowCount(sourceConfig, table);
+                long targetCount = getRowCount(targetConfig, table);
                 
                 // Compare counts
                 boolean isValid = (sourceCount == targetCount);
@@ -113,30 +110,20 @@ public class ValidationExecutor {
      * Gets the row count for a specific table using a prepared statement.
      * Handles schema qualification and SQL injection prevention.
      */
-    private long getRowCount(
-            String jdbcUrl, 
-            String user, 
-            String password, 
-            String databaseName,
-            String tableName,
-            String dbType
-    ) throws Exception {
-        
+    private long getRowCount(DatabaseConnectionConfig config, String tableName) throws Exception {
         // Validate table name to prevent SQL injection
-        if (!isValidTableName(tableName)) {
-            throw new IllegalArgumentException("Invalid table name: " + tableName);
-        }
+        SqlValidator.validateTableName(tableName);
 
         // Build the SQL query with proper schema/database qualification
-        String sql = buildCountQuery(tableName, databaseName, dbType);
+        String sql = buildCountQuery(config, tableName);
         
         log.debug("Executing: {}", sql);
         
-        try (Connection conn = DriverManager.getConnection(jdbcUrl, user, password);
-            PreparedStatement stmt = conn.prepareStatement(sql)) {
+        try (Connection conn = connectionFactory.createConnection(config);
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
             
-            // Set query timeout to prevent hanging
-            stmt.setQueryTimeout(30); // 30 seconds
+            // Set query timeout from configuration
+            stmt.setQueryTimeout(properties.getMonitoring().getQueryTimeoutSeconds());
             
             try (ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) {
@@ -149,55 +136,22 @@ public class ValidationExecutor {
             }
         } catch (SQLException e) {
             log.error("Failed to get row count for table '{}': {}", tableName, e.getMessage());
-            throw new Exception("Database query failed for table " + tableName + ": " + e.getMessage(), e);
+            throw new ValidationException("Database query failed for table " + tableName + ": " + e.getMessage(), e);
         }
     }
 
     /**
      * Builds the COUNT query with proper schema qualification.
      */
-    private String buildCountQuery(String tableName, String databaseName, String dbType) {
-        if ("postgresql".equals(dbType)) {
+    private String buildCountQuery(DatabaseConnectionConfig config, String tableName) {
+        if (config.getType() == DatabaseType.POSTGRESQL) {
             // PostgreSQL uses schema.table format
-            // Default schema is 'public'
-            return String.format("SELECT COUNT(*) FROM public.\"%s\"", tableName);
+            String schema = config.getSchemaOrDefault();
+            return String.format("SELECT COUNT(*) FROM %s.\"%s\"", schema, tableName);
         } else {
             // MySQL uses database.table format
             // Use backticks for identifier quoting in MySQL
-            return String.format("SELECT COUNT(*) FROM `%s`.`%s`", databaseName, tableName);
-        }
-    }
-
-    /**
-     * Validates table name to prevent SQL injection.
-     * Allows: letters, numbers, underscores, and hyphens
-     */
-    private boolean isValidTableName(String tableName) {
-        if (tableName == null || tableName.isEmpty()) {
-            return false;
-        }
-        
-        // Allow alphanumeric, underscore, and hyphen
-        // Disallow spaces, semicolons, quotes, etc.
-        return tableName.matches("^[a-zA-Z0-9_-]+$");
-    }
-
-    /**
-     * Builds proper JDBC URL for each database type.
-     */
-    private String buildJdbcUrl(JobRequest.DbConfig config) {
-        if ("postgresql".equals(config.getType())) {
-            // PostgreSQL-specific URL (no useSSL parameter)
-            return String.format("jdbc:postgresql://%s:%d/%s?ssl=false",
-                    config.getHost(), config.getPort(), config.getDatabase());
-        } else if ("mysql".equals(config.getType())) {
-            // MySQL-specific URL with common parameters
-            return String.format("jdbc:mysql://%s:%d/%s?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC",
-                    config.getHost(), config.getPort(), config.getDatabase());
-        } else {
-            // Generic fallback
-            return String.format("jdbc:%s://%s:%d/%s",
-                    config.getType(), config.getHost(), config.getPort(), config.getDatabase());
+            return String.format("SELECT COUNT(*) FROM `%s`.`%s`", config.getDatabase(), tableName);
         }
     }
 
@@ -221,23 +175,21 @@ public class ValidationExecutor {
         JobRequest.DbConfig source = request.getSource();
         JobRequest.DbConfig target = request.getTarget();
 
-        String sourceJdbc = buildJdbcUrl(source);
-        String targetJdbc = buildJdbcUrl(target);
+        DatabaseConnectionConfig sourceConfig = convertToConnectionConfig(source);
+        DatabaseConnectionConfig targetConfig = convertToConnectionConfig(target);
 
         // Reuse connections
-        try (Connection sourceConn = DriverManager.getConnection(
-                    sourceJdbc, source.getUser(), source.getPassword());
-            Connection targetConn = DriverManager.getConnection(
-                    targetJdbc, target.getUser(), target.getPassword())) {
+        try (Connection sourceConn = connectionFactory.createConnection(sourceConfig);
+             Connection targetConn = connectionFactory.createConnection(targetConfig)) {
             
             boolean allValid = true;
             
             for (String table : request.getTablesToMigrate()) {
                 try {
                     long sourceCount = getRowCountWithConnection(
-                        sourceConn, table, source.getDatabase(), source.getType());
+                        sourceConn, table, sourceConfig);
                     long targetCount = getRowCountWithConnection(
-                        targetConn, table, target.getDatabase(), target.getType());
+                        targetConn, table, targetConfig);
                     
                     if (sourceCount != targetCount) {
                         log.error("✗ Table '{}': {} != {}", table, sourceCount, targetCount);
@@ -260,17 +212,15 @@ public class ValidationExecutor {
     }
 
     private long getRowCountWithConnection(
-            Connection conn, String table, String database, String dbType) 
+            Connection conn, String table, DatabaseConnectionConfig config) 
             throws SQLException {
         
-        if (!isValidTableName(table)) {
-            throw new IllegalArgumentException("Invalid table name: " + table);
-        }
+        SqlValidator.validateTableName(table);
         
-        String sql = buildCountQuery(table, database, dbType);
+        String sql = buildCountQuery(config, table);
         
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setQueryTimeout(30);
+            stmt.setQueryTimeout(properties.getMonitoring().getQueryTimeoutSeconds());
             try (ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) {
                     return rs.getLong(1);
@@ -279,5 +229,19 @@ public class ValidationExecutor {
             }
         }
     }
-
+    
+    /**
+     * Convert JobRequest.DbConfig to DatabaseConnectionConfig.
+     */
+    private DatabaseConnectionConfig convertToConnectionConfig(JobRequest.DbConfig dbConfig) {
+        return DatabaseConnectionConfig.builder()
+            .type(DatabaseType.fromString(dbConfig.getType()))
+            .host(dbConfig.getHost())
+            .port(dbConfig.getPort())
+            .database(dbConfig.getDatabase())
+            .schema(dbConfig.getSchema())
+            .user(dbConfig.getUser())
+            .password(dbConfig.getPassword())
+            .build();
+    }
 }
