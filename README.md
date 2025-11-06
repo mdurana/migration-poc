@@ -14,7 +14,7 @@ This tool supports both **homogeneous** (MySQL $\rightarrow$ MySQL) and **hetero
 * **`source-db`**: A MySQL 8 source database.
 * **`target-db`**: An empty MySQL 8 target database.
 * **`target-db-pg`**: An empty PostgreSQL 15 target database.
-* **`scripts/populate-data.py`**: A helper script to load the source DB with test data.
+* **`scripts/populate-data.py` or `scripts/populate-data-pg.py`**: A helper script to load the source DB with test data.
 
 ## How to Run
 

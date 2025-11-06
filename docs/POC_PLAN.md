@@ -32,7 +32,7 @@ The POC consists of 6 containerized services managed by `docker-compose.yml`, pl
 
 ### Container Network Communication
 - **Orchestrator → Proxy**: Uses container name `shardingsphere-proxy` and container port `3307`
-- **Proxy → Databases**: Uses container names (`source-db`, `target-db`, `target-db-pg`) and container port `3306` (MySQL) or `5432` (PostgreSQL)
+- **Proxy → Databases**: Uses container names (`mysql-source-db`, `mysql-target-db`, `pg-source-db`, `pg-target-db`) and container port `3306` (MySQL) or `5432` (PostgreSQL)
 - **Proxy → ZooKeeper**: Uses container name `zookeeper` and port `2181`
 - **Host → Proxy**: Uses `localhost` and mapped host port `3309`
 
@@ -46,7 +46,7 @@ The proxy is configured via `global.yaml` (not `server.yaml` in 5.5.2) with:
   - `mysql-connector-j-8.4.0.jar`
 
 ## 4. Core Workflow (State Machine)
-The entire migration is triggered by a single `POST /jobs` API call. The `JobService` then executes the following states asynchronously:
+The entire migration is triggered by a single `POST /job` API call. The `JobService` then executes the following states asynchronously:
 
 1.  **`PENDING`**: The job is created in the SQLite DB.
 
@@ -66,7 +66,7 @@ The entire migration is triggered by a single `POST /jobs` API call. The `JobSer
 
 5.  **`SCHEMA_NORMALIZE_FAILED`**: (Error state)
 
-6.  **`SCHEMA_APPLYING`**: The `SchemaExecutor` connects to the `target-db` and applies the schema using:
+6.  **`SCHEMA_APPLYING`**: The `SchemaExecutor` connects to the `*-target-db` and applies the schema using:
     - The raw changelog for homogeneous migrations
     - The normalized changelog for heterogeneous migrations
     - Liquibase's `update` command to create all tables, indexes, and constraints
@@ -76,7 +76,7 @@ The entire migration is triggered by a single `POST /jobs` API call. The `JobSer
 8.  **`DATA_CONFIGURING`**: The `DataExecutor` configures ShardingSphere-Proxy by:
     - Registering source database as a storage unit using `REGISTER STORAGE UNIT source_ds (...)`
     - Registering target database as a storage unit using `REGISTER STORAGE UNIT target_ds (...)`
-    - Creating migration jobs for each table using `MIGRATE TABLE source_ds.schema.table INTO target_ds.schema.table`
+    - Creating migration jobs for each table using `MIGRATE TABLE source_ds.table INTO table`
     - Verifying registration with `SHOW STORAGE UNITS`
 
 9.  **`DATA_CONFIG_FAILED`**: (Error state)
@@ -151,31 +151,24 @@ POST /jobs
 Content-Type: application/json
 
 {
-  "jobName": "mysql-to-postgres-migration",
+  "jobName": "postgresql-to-postgresql-migration",
   "source": {
-    "type": "mysql",
-    "host": "source-db",
-    "port": 3306,
-    "database": "sourcedb",
-    "user": "root",
-    "password": "source_password",
-    "schema": null
+    "type": "postgresql",
+    "host": "pg-source-db",
+    "port": 5432,
+    "database": "pg_db",
+    "user": "postgres",
+    "password": "postgres"
   },
   "target": {
     "type": "postgresql",
-    "host": "target-db-pg",
+    "host": "pg-target-db",
     "port": 5432,
-    "database": "targetdb_pg",
+    "database": "pg_db",
     "user": "postgres",
-    "password": "target_password_pg",
-    "schema": "public"
+    "password": "postgres"
   },
-  "tablesToMigrate": ["users", "orders", "products"],
-  "dataTypeMappings": {
-    "mysql.TINYINT": "SMALLINT",
-    "mysql.TEXT": "TEXT",
-    "mysql.DATETIME": "TIMESTAMP"
-  }
+  "tablesToMigrate": ["users", "orders"]
 }
 ```
 
@@ -186,7 +179,7 @@ GET /jobs/{id}
 Response:
 {
   "id": 1,
-  "jobName": "mysql-to-postgres-migration",
+  "jobName": "postgresql-to-postgresql-migration",
   "status": "DATA_RUNNING",
   "createdAt": "2025-10-21T14:00:00",
   "updatedAt": "2025-10-21T14:05:30",

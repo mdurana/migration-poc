@@ -146,12 +146,13 @@ public class SchemaExecutor {
                     .findCorrectDatabaseImplementation(new JdbcConnection(connection));
             
             DirectoryResourceAccessor resourceAccessor = new DirectoryResourceAccessor(Paths.get("/"));
-            Liquibase liquibase = new Liquibase(changelogPath, resourceAccessor, database);
 
-            log.info("Starting Liquibase update on target...");
-            liquibase.update(new liquibase.Contexts());
-            
-            log.info("Liquibase update on target finished successfully.");
+            try (Liquibase liquibase = new Liquibase(changelogPath, resourceAccessor, database)) {
+                log.info("Starting Liquibase update on target...");
+                liquibase.update(new liquibase.Contexts());
+                
+                log.info("Liquibase update on target finished successfully.");
+            }
 
         } catch (Exception e) {
             log.error("Failed to apply changelog to target: {}", e.getMessage(), e);
