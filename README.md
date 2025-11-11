@@ -36,14 +36,14 @@ mvn wrapper:wrapper
 # When there is a change
 mvn clean package
 
-# For non-Apple Silicon Chip
 rm generated-schema/*.xml
-docker-compose up --build -d
+
+# For non-Apple Silicon Chip, SSP_CONFIG={mysql|pg}
+SSP_CONFIG=mysql docker-compose up --build -d
 
 # For Mac with Apple Silicon Chip
 cd ssp-mac
-rm generated-schema/*.xml
-docker-compose up --build -d
+SSP_CONFIG=mysql docker-compose up --build -d
 ````
 
 Wait about 30-60 seconds for all services to initialize.
